@@ -1,6 +1,26 @@
-[bits 32]
+[bits 32] ; Multiboot2 puts us into 32-bit protected mode - that's why we set the mode of this code to 32-bits
 
-extern caelyx_kmain
-global caelyx__start
+extern caelyx_kmain ; We are going to use the external function which is our kernel entry point - so we extern it
+global caelyx__start 
 caelyx__start:
-    jmp caelyx_kmain
+  cli ; Clear interrupt flag
+  cld ; Clear direction flag
+
+  mov sp, stack_top ; We need to setup a stack which is needed for pretty much anything in a high-level language (i mean anything higher-level than assembly)
+                    ; Since the stack grows downwards, we will need to set the stack pointer to the stack top.
+
+  push ebx ; When booting with the multiboot2 boot protocol, the kernel must provide a Multiboot2 Header -
+           ; which we do in Rust. In return, we get to skip the pain of rolling our own bootloader, and get
+           ; provided with a lot of information by the bootloader. The bootloader must pass the pointer to the
+           ; information in the ebx register, the information is a structure commonly referred to as the
+           ; Multiboot2 Information Structure, For more information, look here: 
+           ; https://www.gnu.org/software/grub/manual/multiboot2/html_node/multiboot2_002eh.html
+           ; https://www.gnu.org/software/grub/manual/multiboot2/multiboot.pdf
+
+  jmp caelyx_kmain ; Jump to our kernel entry point in rust - from there we do the rest needed
+
+section .bss
+stack_bottom:
+; Define a 32K stack.
+resb 32786
+stack_top:
