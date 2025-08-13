@@ -1,0 +1,39 @@
+       Fresh glob v0.3.3
+       Fresh core v0.0.0 (/home/blackneeed/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/core)
+       Fresh compiler_builtins v0.1.160 (/home/blackneeed/.rustup/toolchains/nightly-x86_64-unknown-linux-gnu/lib/rustlib/src/rust/library/compiler-builtins/compiler-builtins)
+       Fresh caelyx v0.1.0 (/home/blackneeed/caelyx)
+warning: unused variable: `info`
+ --> src/main.rs:8:22
+  |
+8 | pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+  |                      ^^^^ help: if this is intentional, prefix it with an underscore: `_info`
+  |
+  = note: `#[warn(unused_variables)]` on by default
+
+warning: `caelyx` (bin "caelyx") generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.07s
+     Running `/home/blackneeed/caelyx/compiletime/run.sh target/target/debug/caelyx.elf`
++ FLAGS='-accel kvm -cpu host -M q35'
++ '[' '' == true ']'
++ mkdir -p build/boot/grub
++ mkdir -p dist
++ cp compiletime/grub.cfg build/boot/grub/grub.cfg
++ cp target/target/debug/caelyx.elf build/boot/caelyx.elf
++ grub-mkrescue build -o dist/caelyx.iso
+xorriso 1.5.6 : RockRidge filesystem manipulator, libburnia project.
+
+Drive current: -outdev 'stdio:dist/caelyx.iso'
+Media current: stdio file, overwriteable
+Media status : is blank
+Media summary: 0 sessions, 0 data blocks, 0 data,  227g free
+Added to ISO image: directory '/'='/tmp/grub.7GjpZH'
+xorriso : UPDATE :    1010 files added in 1 seconds
+Added to ISO image: directory '/'='/home/blackneeed/caelyx/build'
+xorriso : UPDATE :    1014 files added in 1 seconds
+xorriso : NOTE : Copying to System Area: 512 bytes from file '/usr/lib/grub/i386-pc/boot_hybrid.img'
+ISO image produced: 15618 sectors
+Written to medium : 15618 sectors at LBA 0
+Writing to 'stdio:dist/caelyx.iso' completed successfully.
+
++ qemu-system-x86_64 -cdrom dist/caelyx.iso -m 1G -accel kvm -cpu host -M q35
+Fontconfig warning: using without calling FcInit()

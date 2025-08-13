@@ -19,5 +19,8 @@
   "exe-suffix": ".elf",
   "has-rpath": false,
   "no-default-libraries": true,
-  "position-independent-executables": false
+  "position-independent-executables": false,
+  "pre-link-args": {
+    "ld.lld": ["--script=compiletime/linker.ld"]
+  }
 }

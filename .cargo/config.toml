@@ -1,7 +1,7 @@
 [build]
 target = "compiletime/target.json"
 
-[target.'cfg(all)']
+[target.'cfg(all())']
 rustflags = ["-C", "link-arg=-Tcompiletime/linker.ld"]
 
 [target.'cfg(target_os = "none")']

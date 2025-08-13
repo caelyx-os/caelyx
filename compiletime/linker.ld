@@ -2,11 +2,12 @@ ENTRY(caelyx__start)
 
 SECTIONS 
 {
-   .multiboot ALIGN(4K) : {
+    . = 1M;
+
+   .multiboot : {
       KEEP(*(.multiboot*))
     }
 
-    . = 1M;
     PROVIDE(KERNEL_START = .);
 
     .text ALIGN(4K) : {
