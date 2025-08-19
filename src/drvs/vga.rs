@@ -1,3 +1,5 @@
+use core::fmt::{Arguments, Write};
+
 use crate::{sync::mutex::Mutex, util::isituninit::IsItUninit};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -193,4 +195,30 @@ pub fn print(str: &str) -> usize {
     } else {
         0
     }
+}
+
+pub struct StrWriter {
+    pub write: fn(&str),
+}
+
+impl Write for StrWriter {
+    fn write_str(&mut self, s: &str) -> core::fmt::Result {
+        self.write.call((s,));
+        Ok(())
+    }
+}
+
+pub fn __println(args: Arguments<'_>) {
+    let _ = StrWriter {
+        write: |s| {
+            print(s);
+        },
+    }
+    .write_fmt(args);
+    print("\r\n");
+}
+
+#[macro_export]
+macro_rules! println {
+    ($($arg:tt)*) => ($crate::drvs::vga::__println(format_args!($($arg)*)));
 }
