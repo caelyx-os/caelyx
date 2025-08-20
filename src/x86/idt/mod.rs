@@ -1,3 +1,5 @@
+use crate::{println, sync::mutex::Mutex, x86::gdt::SharedGdtrAndIdtr};
+
 pub mod interrupt_control {
     pub fn disable_interrupts() {
         unsafe {
@@ -47,4 +49,65 @@ pub mod interrupt_control {
         // The 9th bit in the eflags register is the interrupt enable flag.
         (eflags & (1 << 9)) != 0
     }
+}
+
+static IDTR: Mutex<SharedGdtrAndIdtr> = Mutex::new(SharedGdtrAndIdtr { limit: 0, base: 0 });
+static ISR_GATES: Mutex<[u64; 256]> = Mutex::new([0; 256]);
+
+#[derive(Debug, Clone, Copy)]
+pub struct InterruptGate {
+    pub offset: u32,
+    pub segment_selector: u16,
+    pub gate_type: u8,
+    pub dpl: u8,
+    pub present: bool,
+}
+
+impl InterruptGate {
+    pub fn to_u64(&self) -> u64 {
+        let mut gate = 0;
+        gate |= (self.offset & 0xFFFF) as u64;
+        gate |= (self.segment_selector as u64) << 16;
+        gate |= ((self.gate_type & 0b1111) as u64) << 40;
+        gate |= ((self.dpl & 0b11) as u64) << 45;
+        gate |= (if self.present { 1 } else { 0 }) << 47;
+        gate |= ((self.offset >> 16) as u64) << 48;
+        gate
+    }
+}
+
+pub fn set_interrupt_gate(gate: InterruptGate, idx: u8) {
+    ISR_GATES.lock()[idx as usize] = gate.to_u64();
+}
+
+pub fn load_idt() {
+    unsafe { core::arch::asm!("lidt [{idt_reg:e}]", idt_reg = in(reg) &raw const *IDTR.lock()) }
+}
+
+pub fn store_idt(loc: *const SharedGdtrAndIdtr) {
+    unsafe { core::arch::asm!("sidt [{idt_reg:e}]", idt_reg = in(reg) loc) }
+}
+
+pub fn init() {
+    {
+        let gates_lock = ISR_GATES.lock();
+        let mut idtr_lock = IDTR.lock();
+        idtr_lock.base = (&raw const *gates_lock) as u32;
+        idtr_lock.limit = (gates_lock.len() * core::mem::size_of_val(&gates_lock[0]) - 1) as u16;
+    }
+    load_idt();
+    let idtr = SharedGdtrAndIdtr { base: 0, limit: 0 };
+    store_idt(&raw const idtr);
+
+    assert_eq!(
+        unsafe { core::ptr::read_unaligned(&raw const IDTR.lock().limit) },
+        unsafe { core::ptr::read_unaligned(&raw const idtr.limit) }
+    );
+
+    assert_eq!(
+        unsafe { core::ptr::read_unaligned(&raw const IDTR.lock().base) },
+        unsafe { core::ptr::read_unaligned(&raw const idtr.base) }
+    );
+
+    println!("IDT init..OK");
 }

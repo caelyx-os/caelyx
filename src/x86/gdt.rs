@@ -22,10 +22,13 @@ pub struct SharedGdtrAndIdtr {
 static GDTR: Mutex<SharedGdtrAndIdtr> = Mutex::new(SharedGdtrAndIdtr { limit: 0, base: 0 });
 
 pub fn init() {
-    GDTR.lock().base = &raw const GDT as u32;
-    GDTR.lock().limit = (core::mem::size_of_val(&GDT) - 1) as u16;
-    let gdt = &(GDTR.lock()).clone();
-    let gdt_ptr = &raw const gdt;
+    let gdt_ptr;
+    {
+        let mut lock = GDTR.lock();
+        lock.base = &raw const GDT as u32;
+        lock.limit = (core::mem::size_of_val(&GDT) - 1) as u16;
+        gdt_ptr = &raw const *lock;
+    }
     unsafe {
         // We first load the gdt using the lgdt instruction and after that we need to execute
         // something called a far jump since we cannot directly change cs. Then we need to change
