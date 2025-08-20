@@ -1,3 +1,4 @@
+pub mod gdt;
 pub mod idt;
 
 // This halts the CPU (it can be woken up by a interrupt)

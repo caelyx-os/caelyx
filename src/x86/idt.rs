@@ -43,6 +43,8 @@ pub mod interrupt_control {
                     out(reg) eflags,
             );
         }
+
+        // The 9th bit in the eflags register is the interrupt enable flag.
         (eflags & (1 << 9)) != 0
     }
 }

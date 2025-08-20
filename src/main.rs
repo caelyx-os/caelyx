@@ -5,7 +5,7 @@
 
 use crate::{
     drvs::vga::init as vga_init,
-    x86::{halt, idt::interrupt_control::disable_interrupts},
+    x86::{gdt::init as gdt_init, halt, idt::interrupt_control::disable_interrupts},
 };
 
 pub mod drvs;
@@ -16,6 +16,7 @@ pub mod x86;
 #[unsafe(no_mangle)]
 pub extern "C" fn caelyx_kmain() {
     vga_init();
+    gdt_init();
     panic!("Finished all work");
 }
 
