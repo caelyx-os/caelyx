@@ -1,4 +1,7 @@
+use crate::x86::gdt::GDT_CODE;
+use crate::x86::halt;
 use crate::{println, sync::mutex::Mutex, x86::gdt::SharedGdtrAndIdtr};
+use core::ptr::read_unaligned;
 
 pub mod interrupt_control {
     pub fn disable_interrupts() {
@@ -76,6 +79,107 @@ impl InterruptGate {
     }
 }
 
+unsafe extern "C" {
+    static isr_stubs: [u32; 256];
+}
+
+#[repr(C, packed)]
+#[derive(Debug)]
+pub struct ISRFrame {
+    edi: u32,
+    esi: u32,
+    ebp: u32,
+    esp: u32,
+    ebx: u32,
+    edx: u32,
+    ecx: u32,
+    eax: u32,
+    int_no: u32,
+    err_no: u32,
+    eip: u32,
+    cs: u32,
+    eflags: u32,
+}
+
+#[unsafe(no_mangle)]
+extern "C" fn isr_general_handler(frame: *const ISRFrame) {
+    let isr_frame: &'static ISRFrame = unsafe { &*frame };
+    if isr_frame.int_no < 32 {
+        println!("");
+        println!(r" -------------           -------------    ");
+        println!(r"/             \          /             \  ");
+        println!(r"|             |          |             |  ");
+        println!(r"|             |          |             |  ");
+        println!(r"|             |          |             |  ");
+        println!(r"\             /          \             /  ");
+        println!(r" -------------            -------------   ");
+        println!(r"                                          ");
+        println!(r"   -----------------------------------    ");
+        println!(r"  /                                   \   ");
+        println!(r" /                                     \  ");
+        println!("");
+
+        println!(
+            "{}",
+            match isr_frame.int_no {
+                0 => "DIVISION ERROR",
+                1 => "DEBUG",
+                2 => "NON MASKABLE INTERRUPT",
+                3 => "BREAKPOINT",
+                4 => "OVERFLOW",
+                5 => "BOUND RANGE EXCEEDED",
+                6 => "INVALID OPCODE",
+                7 => "DEVICE NOT AVAILABLE",
+                8 => "DOUBLE FAULT",
+                9 => "COPROCESSOR SEGMENT OVERRUN",
+                10 => "INVALID TSS",
+                11 => "SEGMENT NOT PRESENT",
+                12 => "STACK SEGMENT FAULT",
+                13 => "GENERAL PROTECTION FAULT",
+                14 => "PAGE FAULT",
+                16 => "FLOATING POINT EXCEPTION",
+                17 => "ALIGNMENT CHECK",
+                18 => "MACHINE CHECK",
+                19 => "SIMD FLOATING POINT EXCEPTION",
+                20 => "VIRTUALIZATION EXCEPTION",
+                21 => "CONTROL PROTECTION EXCEPTION",
+                28 => "HYPERVISOR INJECTION EXCEPTION",
+                29 => "VMM COMMUNICATION EXCEPTION",
+                30 => "SECURITY EXCEPTION",
+                _ => "UNKNOWN EXCEPTION",
+            }
+        );
+
+        println!(
+            "EAX ={:#010X} EBX ={:#010X} ECX    ={:#010X} EDX={:#010X}",
+            unsafe { read_unaligned(&raw const isr_frame.eax) },
+            unsafe { read_unaligned(&raw const isr_frame.ebx) },
+            unsafe { read_unaligned(&raw const isr_frame.ecx) },
+            unsafe { read_unaligned(&raw const isr_frame.edx) }
+        );
+
+        println!(
+            "ESI ={:#010X} EDI ={:#010X} EBP    ={:#010X} ESP={:#010X}",
+            unsafe { read_unaligned(&raw const isr_frame.esi) },
+            unsafe { read_unaligned(&raw const isr_frame.edi) },
+            unsafe { read_unaligned(&raw const isr_frame.ebp) },
+            unsafe { read_unaligned(&raw const isr_frame.esp) },
+        );
+
+        println!(
+            "EIP ={:#010X} CS  ={:#010X} EFLAGS ={:#010X}",
+            unsafe { read_unaligned(&raw const isr_frame.eip) },
+            unsafe { read_unaligned(&raw const isr_frame.cs) },
+            unsafe { read_unaligned(&raw const isr_frame.eflags) },
+        );
+
+        interrupt_control::disable_interrupts();
+        loop {
+            halt();
+        }
+    }
+}
+
 pub fn set_interrupt_gate(gate: InterruptGate, idx: u8) {
     ISR_GATES.lock()[idx as usize] = gate.to_u64();
 }
@@ -100,14 +204,33 @@ pub fn init() {
     store_idt(&raw const idtr);
 
     assert_eq!(
-        unsafe { core::ptr::read_unaligned(&raw const IDTR.lock().limit) },
-        unsafe { core::ptr::read_unaligned(&raw const idtr.limit) }
+        unsafe { read_unaligned(&raw const IDTR.lock().limit) },
+        unsafe { read_unaligned(&raw const idtr.limit) }
     );
 
     assert_eq!(
-        unsafe { core::ptr::read_unaligned(&raw const IDTR.lock().base) },
-        unsafe { core::ptr::read_unaligned(&raw const idtr.base) }
+        unsafe { read_unaligned(&raw const IDTR.lock().base) },
+        unsafe { read_unaligned(&raw const idtr.base) }
     );
+
+    for (i, stub) in unsafe { isr_stubs }.iter().enumerate() {
+        set_interrupt_gate(
+            InterruptGate {
+                segment_selector: GDT_CODE,
+                gate_type: 0xE,
+                dpl: 0,
+                present: true,
+                offset: *stub,
+            },
+            i.try_into().unwrap(),
+        );
+    }
+    unsafe {
+        core::arch::asm!("out dx, al", in("al") 0xFFu8, in("dx") 0x21);
+        core::arch::asm!("out dx, al", in("al") 0xFFu8, in("dx") 0xA1);
+    }
+
+    interrupt_control::enable_interrupts();
 
     println!("IDT init..OK");
 }
