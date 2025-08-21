@@ -27,13 +27,14 @@ extern caelyx_kmain ; We are going to use the external function which is our ker
 global caelyx__start 
 section .text
 caelyx__start:
+  mov [stack_top], ebx
   cli ; Clear interrupt flag
   cld ; Clear direction flag
 
   mov esp, stack_top ; We need to setup a stack which is needed for pretty much anything in a high-level language (i mean anything higher-level than assembly)
                     ; Since the stack grows downwards, we will need to set the stack pointer to the stack top.
 
-  push ebx ; When booting with the multiboot2 boot protocol, the kernel must provide a Multiboot2 Header -
+  push dword [stack_top] ; When booting with the multiboot2 boot protocol, the kernel must provide a Multiboot2 Header -
            ; which we do above. In return, we get to skip the pain of rolling our own bootloader, and get
            ; provided with a lot of information by the bootloader. The bootloader must pass the pointer to the
            ; information in the ebx register, the information is a structure commonly referred to as the

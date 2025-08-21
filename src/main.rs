@@ -4,6 +4,7 @@
 #![feature(fn_traits)]
 
 use crate::{
+    boot::multiboot2,
     drvs::vga::init as vga_init,
     x86::{
         gdt::init as gdt_init,
@@ -19,10 +20,16 @@ pub mod util;
 pub mod x86;
 
 #[unsafe(no_mangle)]
-extern "C" fn caelyx_kmain() {
+extern "C" fn caelyx_kmain(mb2_info: *const ()) {
     vga_init();
     gdt_init();
     idt_init();
+    let iter = multiboot2::TagIterator::new(mb2_info);
+
+    for tag in iter {
+        println!("{tag:?}");
+    }
+
     panic!("Finished all work");
 }
 

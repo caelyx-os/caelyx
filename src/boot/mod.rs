@@ -1,1 +1,1 @@
-pub mod multiboot;
+pub mod multiboot2;
