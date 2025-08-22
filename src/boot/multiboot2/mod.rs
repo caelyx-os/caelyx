@@ -1,21 +1,25 @@
-use crate::util::align_ptr_up;
+use core::marker::PhantomData;
+
+use crate::misc::ptr_align::align_ptr_up;
 
 mod bindings;
 
 #[derive(Clone, Copy, Debug)]
-pub struct TagIterator {
+pub struct TagIterator<'a> {
     tag: *const bindings::multiboot_tag,
+    __phantom: PhantomData<&'a ()>,
 }
 
-impl TagIterator {
+impl<'a> TagIterator<'a> {
     pub fn new(info: *const ()) -> Self {
         let mb_info_ptr = info as *const bindings::multiboot_info;
         Self {
             tag: unsafe { (*mb_info_ptr).tags.as_ptr() },
+            __phantom: PhantomData,
         }
     }
 
-    pub fn get_tag(&self) -> Option<MultibootTag> {
+    pub fn get_tag(&self) -> Option<MultibootTag<'a>> {
         let tag_type = unsafe { (*self.tag).type_ };
         match tag_type {
             bindings::MULTIBOOT_TAG_TYPE_END => Some(MultibootTag::End),
@@ -24,7 +28,17 @@ impl TagIterator {
             bindings::MULTIBOOT_TAG_TYPE_MODULE => Some(MultibootTag::Module),
             bindings::MULTIBOOT_TAG_TYPE_BASIC_MEMINFO => Some(MultibootTag::BasicMemInfo),
             bindings::MULTIBOOT_TAG_TYPE_BOOTDEV => Some(MultibootTag::BootDev),
-            bindings::MULTIBOOT_TAG_TYPE_MMAP => Some(MultibootTag::Mmap),
+            bindings::MULTIBOOT_TAG_TYPE_MMAP => {
+                let mmap_tag = self.tag as *const bindings::multiboot_tag_mmap;
+                Some(MultibootTag::Mmap(unsafe {
+                    core::slice::from_raw_parts(
+                        (*mmap_tag).entries.as_ptr() as *const _MultibootMmapPart,
+                        ((*mmap_tag).size as usize
+                            - core::mem::size_of::<bindings::multiboot_tag_mmap>())
+                            / core::mem::size_of::<bindings::multiboot_mmap_entry>(),
+                    )
+                }))
+            }
             bindings::MULTIBOOT_TAG_TYPE_VBE => Some(MultibootTag::Vbe),
             bindings::MULTIBOOT_TAG_TYPE_FRAMEBUFFER => Some(MultibootTag::FrameBuffer),
             bindings::MULTIBOOT_TAG_TYPE_ELF_SECTIONS => Some(MultibootTag::ElfSections),
@@ -46,14 +60,57 @@ impl TagIterator {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub enum MultibootTag {
+pub struct MultibootMmapEntry {
+    pub start: u64,
+    pub size: u64,
+    pub type_: MultibootMmapEntryType,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MultibootMmapEntryType {
+    Available = 1,
+    Reserved = 2,
+    AcpiReclaimable = 3,
+    AcpiNvs = 4,
+    Badram = 5,
+    Unknown,
+}
+
+impl MultibootMmapEntryType {
+    pub fn from_u32(v: u32) -> Self {
+        match v {
+            1 => Self::Available,
+            2 => Self::Reserved,
+            3 => Self::AcpiReclaimable,
+            4 => Self::AcpiNvs,
+            5 => Self::Badram,
+            _ => Self::Unknown,
+        }
+    }
+}
+
+#[repr(C, packed)]
+#[derive(Debug)]
+pub struct _MultibootMmapPart(bindings::multiboot_mmap_entry);
+impl _MultibootMmapPart {
+    pub fn as_mmap_entry(&self) -> MultibootMmapEntry {
+        MultibootMmapEntry {
+            start: self.0.addr,
+            size: self.0.len,
+            type_: MultibootMmapEntryType::from_u32(self.0.type_),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum MultibootTag<'a> {
     End,
     CmdLine,
     BootLoaderName,
     Module,
     BasicMemInfo,
     BootDev,
-    Mmap,
+    Mmap(&'a [_MultibootMmapPart]),
     Vbe,
     FrameBuffer,
     ElfSections,
@@ -71,8 +128,8 @@ pub enum MultibootTag {
     LoadBaseAddr,
 }
 
-impl Iterator for TagIterator {
-    type Item = MultibootTag;
+impl<'a> Iterator for TagIterator<'a> {
+    type Item = MultibootTag<'a>;
     fn next(&mut self) -> Option<Self::Item> {
         let tag_ref = unsafe { &*self.tag };
         let ret = self.get_tag();

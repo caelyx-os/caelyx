@@ -12,10 +12,17 @@ pub struct IsItUninit<T> {
 }
 
 impl<T> IsItUninit<T> {
-    pub const fn new() -> IsItUninit<T> {
+    pub const fn uninit() -> IsItUninit<T> {
         IsItUninit {
             maybe_uninit: MaybeUninit::uninit(),
             uninit: AtomicBool::new(true),
+        }
+    }
+
+    pub const fn init(val: T) -> IsItUninit<T> {
+        IsItUninit {
+            maybe_uninit: MaybeUninit::new(val),
+            uninit: AtomicBool::new(false),
         }
     }
 
@@ -85,6 +92,6 @@ impl<T> IsItUninit<T> {
 
 impl<T> Default for IsItUninit<T> {
     fn default() -> Self {
-        Self::new()
+        Self::uninit()
     }
 }

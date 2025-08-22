@@ -1,6 +1,8 @@
+use crate::{
+    misc::{isituninit::IsItUninit, str_writer::StrWriter},
+    sync::mutex::Mutex,
+};
 use core::fmt::{Arguments, Write};
-
-use crate::{sync::mutex::Mutex, util::isituninit::IsItUninit};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum VGAColor {
@@ -180,7 +182,7 @@ impl<'a> VGADriver<'a> {
     }
 }
 
-static INSTANCE: Mutex<IsItUninit<VGADriver>> = Mutex::new(IsItUninit::new());
+static INSTANCE: Mutex<IsItUninit<VGADriver>> = Mutex::new(IsItUninit::uninit());
 
 pub fn init() {
     let mut drv = VGADriver::new();
@@ -188,37 +190,15 @@ pub fn init() {
     INSTANCE.lock().write(drv);
 }
 
-pub fn print(str: &str) -> usize {
+pub fn print(str: &str) {
     if let Some(vga) = INSTANCE.lock().try_get_mut() {
         vga.print(str, VGAColorPair::default());
-        str.len()
-    } else {
-        0
     }
 }
 
-pub struct StrWriter {
-    pub write: fn(&str),
-}
-
-impl Write for StrWriter {
-    fn write_str(&mut self, s: &str) -> core::fmt::Result {
-        self.write.call((s,));
-        Ok(())
-    }
-}
-
-pub fn __println(args: Arguments<'_>) {
+pub fn print_fmt(args: Arguments<'_>) {
     let _ = StrWriter {
-        write: |s| {
-            print(s);
-        },
+        write: |s| print(s),
     }
     .write_fmt(args);
-    print("\r\n");
-}
-
-#[macro_export]
-macro_rules! println {
-    ($($arg:tt)*) => ($crate::drvs::vga::__println(format_args!($($arg)*)));
 }

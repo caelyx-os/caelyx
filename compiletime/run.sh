@@ -2,7 +2,7 @@
 
 set -xe
 
-FLAGS="-accel kvm -cpu host -M q35"
+FLAGS="-accel kvm -cpu host -M q35 -serial stdio"
 
 if [ "$GDB" == "true" ]; then
   FLAGS="${FLAGS} -S -s -no-reboot -no-shutdown"
