@@ -82,29 +82,16 @@ impl PhysicalMemoryAllocator {
         for (start, size) in free_region_iterator {
             let end = start + size;
 
-            let mut first = None;
-            let mut second = None;
-
             if !(kernel_start >= start && kernel_end <= end) {
-                first = Some((start, end));
+                process_chunk(start, end - start);
             } else {
                 if kernel_start > start {
-                    first = Some((start, kernel_start));
+                    process_chunk(start, kernel_start - start);
                 }
 
                 if kernel_end < end {
-                    second = Some((kernel_end, end));
+                    process_chunk(kernel_end, end - kernel_end);
                 }
-            }
-
-            if let Some(first) = first {
-                let (start, end) = first;
-                process_chunk(start, end - start);
-            }
-
-            if let Some(second) = second {
-                let (start, end) = second;
-                process_chunk(start, end - start);
             }
 
             fn process_chunk(start: usize, size: usize) -> Option<(usize, usize)> {
