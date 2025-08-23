@@ -1,3 +1,4 @@
+use crate::misc::output::raw_print::print_line_ending;
 use crate::x86::gdt::GDT_CODE;
 use crate::x86::halt;
 use crate::{debug, fatal, sync::mutex::Mutex, trace, x86::gdt::SharedGdtrAndIdtr};
@@ -113,7 +114,7 @@ pub struct ISRFrame {
 extern "C" fn isr_general_handler(frame: *const ISRFrame) {
     let isr_frame: &'static ISRFrame = unsafe { &*frame };
     if isr_frame.int_no < 32 {
-        fatal!("");
+        print_line_ending();
         fatal!(r" -------------           -------------    ");
         fatal!(r"/             \          /             \  ");
         fatal!(r"|             |          |             |  ");
@@ -125,7 +126,7 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
         fatal!(r"   -----------------------------------    ");
         fatal!(r"  /                                   \   ");
         fatal!(r" /                                     \  ");
-        fatal!("");
+        print_line_ending();
 
         fatal!(
             "{}",

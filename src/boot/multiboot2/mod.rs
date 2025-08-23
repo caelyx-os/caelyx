@@ -66,12 +66,12 @@ pub struct MultibootMmapEntry {
     pub type_: MultibootMmapEntryType,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum MultibootMmapEntryType {
     Available = 1,
     Reserved = 2,
-    AcpiReclaimable = 3,
-    AcpiNvs = 4,
+    AcpiReclaim = 3,
+    Nvs = 4,
     Badram = 5,
     Unknown,
 }
@@ -81,8 +81,8 @@ impl MultibootMmapEntryType {
         match v {
             1 => Self::Available,
             2 => Self::Reserved,
-            3 => Self::AcpiReclaimable,
-            4 => Self::AcpiNvs,
+            3 => Self::AcpiReclaim,
+            4 => Self::Nvs,
             5 => Self::Badram,
             _ => Self::Unknown,
         }

@@ -6,7 +6,8 @@
 use crate::{
     boot::multiboot2,
     drvs::{e9::init as e9_init, serial::init as serial_init, vga::init as vga_init},
-    misc::output::logger::init as logger_init,
+    misc::output::{logger::init as logger_init, raw_print::print_line_ending},
+    mm::pmm::init as pmm_init,
     x86::{
         gdt::init as gdt_init,
         halt,
@@ -17,6 +18,7 @@ use crate::{
 pub mod boot;
 pub mod drvs;
 pub mod misc;
+pub mod mm;
 pub mod sync;
 pub mod x86;
 
@@ -29,32 +31,15 @@ extern "C" fn caelyx_kmain(mb2_info: *const ()) -> ! {
     logger_init();
     gdt_init();
     idt_init();
-    let iter = multiboot2::TagIterator::new(mb2_info);
-
-    for tag in iter {
-        if let multiboot2::MultibootTag::Mmap(entries) = tag {
-            let entries = entries.iter().map(|x| x.as_mmap_entry());
-
-            debug!("Printing memory map");
-            for entry in entries {
-                debug!("-------------------------------------------------------------------------");
-                debug!(
-                    "0x{:016X}-0x{:016X} - {:?}",
-                    entry.start,
-                    entry.start + entry.size,
-                    entry.type_
-                );
-                debug!("-------------------------------------------------------------------------");
-            }
-        }
-    }
+    let mut multiboot_iter = multiboot2::TagIterator::new(mb2_info);
+    pmm_init(&mut multiboot_iter);
 
     panic!("Finished all work");
 }
 
 #[panic_handler]
 pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
-    fatal!("");
+    print_line_ending();
     fatal!(r" -------------           -------------    ");
     fatal!(r"/             \          /             \  ");
     fatal!(r"|             |          |             |  ");
@@ -66,7 +51,7 @@ pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     fatal!(r"   -----------------------------------    ");
     fatal!(r"  /                                   \   ");
     fatal!(r" /                                     \  ");
-    fatal!("");
+    print_line_ending();
 
     if let Some(loc) = info.location() {
         fatal!("panic occured at {}:{}", loc.file(), loc.line());
