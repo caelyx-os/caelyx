@@ -49,16 +49,25 @@ extern "C" fn caelyx_kmain(mb2_info: *const ()) -> ! {
         }
     }
 
-    disable_interrupts();
-    loop {
-        halt();
-    }
-
-    //panic!("Finished all work");
+    panic!("Finished all work");
 }
 
 #[panic_handler]
 pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+    fatal!("");
+    fatal!(r" -------------           -------------    ");
+    fatal!(r"/             \          /             \  ");
+    fatal!(r"|             |          |             |  ");
+    fatal!(r"|             |          |             |  ");
+    fatal!(r"|             |          |             |  ");
+    fatal!(r"\             /          \             /  ");
+    fatal!(r" -------------            -------------   ");
+    fatal!(r"                                          ");
+    fatal!(r"   -----------------------------------    ");
+    fatal!(r"  /                                   \   ");
+    fatal!(r" /                                     \  ");
+    fatal!("");
+
     if let Some(loc) = info.location() {
         fatal!("panic occured at {}:{}", loc.file(), loc.line());
     } else {
