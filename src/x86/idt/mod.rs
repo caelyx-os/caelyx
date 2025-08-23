@@ -1,6 +1,6 @@
 use crate::x86::gdt::GDT_CODE;
 use crate::x86::halt;
-use crate::{println, sync::mutex::Mutex, x86::gdt::SharedGdtrAndIdtr};
+use crate::{debug, fatal, sync::mutex::Mutex, trace, x86::gdt::SharedGdtrAndIdtr};
 use core::ptr::read_unaligned;
 
 pub mod interrupt_control {
@@ -9,6 +9,10 @@ pub mod interrupt_control {
             // On x86, we use the cli instruction to disable interrupts. It stands for (Cl)ear
             // (i)nterrupt flag
             core::arch::asm!("cli");
+            // trace!("Disabled interrupts");
+            // This might be a design flaw but shush. We can't use this since the log() function
+            // locks a mutex which uses this to disable interrupts. So if we were to do it it would
+            // enter log() and try to lock the mutex again and fucking deadlock
         }
     }
 
@@ -17,6 +21,10 @@ pub mod interrupt_control {
             // On x86, we use the sti instruction to enable interrupts. It stands for (S)e(t)
             // (i)nterrupt flag
             core::arch::asm!("sti");
+            // trace!("Enabled interrupts");
+            // This might be a design flaw but shush. We can't use this since the log() function
+            // locks a mutex which uses this to enable interrupts. So if we were to do it it would
+            // enter log() and try to lock the mutex again and fucking deadlock
         }
     }
 
@@ -105,21 +113,21 @@ pub struct ISRFrame {
 extern "C" fn isr_general_handler(frame: *const ISRFrame) {
     let isr_frame: &'static ISRFrame = unsafe { &*frame };
     if isr_frame.int_no < 32 {
-        println!("");
-        println!(r" -------------           -------------    ");
-        println!(r"/             \          /             \  ");
-        println!(r"|             |          |             |  ");
-        println!(r"|             |          |             |  ");
-        println!(r"|             |          |             |  ");
-        println!(r"\             /          \             /  ");
-        println!(r" -------------            -------------   ");
-        println!(r"                                          ");
-        println!(r"   -----------------------------------    ");
-        println!(r"  /                                   \   ");
-        println!(r" /                                     \  ");
-        println!("");
+        fatal!("");
+        fatal!(r" -------------           -------------    ");
+        fatal!(r"/             \          /             \  ");
+        fatal!(r"|             |          |             |  ");
+        fatal!(r"|             |          |             |  ");
+        fatal!(r"|             |          |             |  ");
+        fatal!(r"\             /          \             /  ");
+        fatal!(r" -------------            -------------   ");
+        fatal!(r"                                          ");
+        fatal!(r"   -----------------------------------    ");
+        fatal!(r"  /                                   \   ");
+        fatal!(r" /                                     \  ");
+        fatal!("");
 
-        println!(
+        fatal!(
             "{}",
             match isr_frame.int_no {
                 0 => "DIVISION ERROR",
@@ -150,7 +158,7 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
             }
         );
 
-        println!(
+        debug!(
             "EAX ={:#010X} EBX ={:#010X} ECX    ={:#010X} EDX={:#010X}",
             unsafe { read_unaligned(&raw const isr_frame.eax) },
             unsafe { read_unaligned(&raw const isr_frame.ebx) },
@@ -158,7 +166,7 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
             unsafe { read_unaligned(&raw const isr_frame.edx) }
         );
 
-        println!(
+        debug!(
             "ESI ={:#010X} EDI ={:#010X} EBP    ={:#010X} ESP={:#010X}",
             unsafe { read_unaligned(&raw const isr_frame.esi) },
             unsafe { read_unaligned(&raw const isr_frame.edi) },
@@ -166,7 +174,7 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
             unsafe { read_unaligned(&raw const isr_frame.esp) },
         );
 
-        println!(
+        debug!(
             "EIP ={:#010X} CS  ={:#010X} EFLAGS ={:#010X}",
             unsafe { read_unaligned(&raw const isr_frame.eip) },
             unsafe { read_unaligned(&raw const isr_frame.cs) },
@@ -182,14 +190,17 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
 
 pub fn set_interrupt_gate(gate: InterruptGate, idx: u8) {
     ISR_GATES.lock()[idx as usize] = gate.to_u64();
+    trace!("Set interrupt gate {}", idx);
 }
 
 pub fn load_idt() {
     unsafe { core::arch::asm!("lidt [{idt_reg:e}]", idt_reg = in(reg) &raw const *IDTR.lock()) }
+    trace!("Loaded IDTR");
 }
 
 pub fn store_idt(loc: *const SharedGdtrAndIdtr) {
     unsafe { core::arch::asm!("sidt [{idt_reg:e}]", idt_reg = in(reg) loc) }
+    trace!("Stored IDTR");
 }
 
 pub fn init() {
@@ -199,6 +210,7 @@ pub fn init() {
         idtr_lock.base = (&raw const *gates_lock) as u32;
         idtr_lock.limit = (gates_lock.len() * core::mem::size_of_val(&gates_lock[0]) - 1) as u16;
     }
+    trace!("Initialized IDTR");
     load_idt();
     let idtr = SharedGdtrAndIdtr { base: 0, limit: 0 };
     store_idt(&raw const idtr);
@@ -213,6 +225,8 @@ pub fn init() {
         unsafe { read_unaligned(&raw const idtr.base) }
     );
 
+    trace!("Loaded IDTR matches stored IDTR");
+
     for (i, stub) in unsafe { isr_stubs }.iter().enumerate() {
         set_interrupt_gate(
             InterruptGate {
@@ -225,12 +239,15 @@ pub fn init() {
             i.try_into().unwrap(),
         );
     }
+
     unsafe {
         core::arch::asm!("out dx, al", in("al") 0xFFu8, in("dx") 0x21);
         core::arch::asm!("out dx, al", in("al") 0xFFu8, in("dx") 0xA1);
     }
 
+    trace!("Masked PIC");
+
     interrupt_control::enable_interrupts();
 
-    println!("IDT init..OK");
+    debug!("Initialized IDT");
 }

@@ -89,7 +89,7 @@ impl<'a> Iterator for SerialPortIterator<'a> {
 pub fn init() {
     let iter = SerialPortIterator::new(&[(1, 0x3F8), (2, 0x2F8), (3, 0x3E8), (4, 0x2E8)]);
     let mut lock = PORTS.lock();
-    let _ = lock.try_write_once(SerialPortArr::default());
+    lock.write(SerialPortArr::default());
 
     for (i, (idx, port)) in iter.enumerate() {
         lock.get_mut()[i] = IsItUninit::init(SerialPort::new(idx, port));

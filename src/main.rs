@@ -6,6 +6,7 @@
 use crate::{
     boot::multiboot2,
     drvs::{e9::init as e9_init, serial::init as serial_init, vga::init as vga_init},
+    misc::output::logger::init as logger_init,
     x86::{
         gdt::init as gdt_init,
         halt,
@@ -20,10 +21,12 @@ pub mod sync;
 pub mod x86;
 
 #[unsafe(no_mangle)]
-extern "C" fn caelyx_kmain(mb2_info: *const ()) {
+extern "C" fn caelyx_kmain(mb2_info: *const ()) -> ! {
+    let _ = mb2_info;
     vga_init();
     serial_init();
     e9_init();
+    logger_init();
     gdt_init();
     idt_init();
     let iter = multiboot2::TagIterator::new(mb2_info);
@@ -32,31 +35,39 @@ extern "C" fn caelyx_kmain(mb2_info: *const ()) {
         if let multiboot2::MultibootTag::Mmap(entries) = tag {
             let entries = entries.iter().map(|x| x.as_mmap_entry());
 
+            debug!("Printing memory map");
             for entry in entries {
-                println!(
+                debug!("-------------------------------------------------------------------------");
+                debug!(
                     "0x{:016X}-0x{:016X} - {:?}",
                     entry.start,
                     entry.start + entry.size,
                     entry.type_
                 );
+                debug!("-------------------------------------------------------------------------");
             }
         }
     }
 
-    panic!("Finished all work");
+    disable_interrupts();
+    loop {
+        halt();
+    }
+
+    //panic!("Finished all work");
 }
 
 #[panic_handler]
 pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     if let Some(loc) = info.location() {
-        println!("panic occured at {}:{}", loc.file(), loc.line());
+        fatal!("panic occured at {}:{}", loc.file(), loc.line());
     } else {
-        println!("panic occured");
+        fatal!("panic occured");
     }
 
-    println!("\tmessage: \"{}\"", info.message());
+    fatal!("\tmessage: \"{}\"", info.message());
     disable_interrupts();
-    println!("kernel halted");
+    fatal!("kernel halted");
     loop {
         halt();
     }

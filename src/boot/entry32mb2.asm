@@ -45,7 +45,7 @@ caelyx__start:
   jmp caelyx_kmain ; Jump to our kernel entry point in rust - from there we do the rest needed
 
 section .bss
+align 16
 stack_bottom:
-; Define a 32K stack.
-resb 32768
+resb 64 * 1024
 stack_top:

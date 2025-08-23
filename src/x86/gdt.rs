@@ -1,4 +1,4 @@
-use crate::{println, sync::mutex::Mutex};
+use crate::{debug, sync::mutex::Mutex, trace, x86::halt};
 
 // This is just a minimal GDT i sticked together 50 decades ago
 static GDT: [u64; 3] = [0x0000000000000000, 0x00CF9A000000FFFF, 0x00CF92000000FFFF];
@@ -29,6 +29,9 @@ pub fn init() {
         lock.limit = (core::mem::size_of_val(&GDT) - 1) as u16;
         gdt_ptr = &raw const *lock;
     }
+
+    trace!("Initialized GDTR");
+
     unsafe {
         // We first load the gdt using the lgdt instruction and after that we need to execute
         // something called a far jump since we cannot directly change cs. Then we need to change
@@ -51,5 +54,6 @@ pub fn init() {
                          out("eax") _);
     }
 
-    println!("GDT init..OK");
+    trace!("Loaded GDTR & Reloaded cs,ds,es,fs,gs,ss");
+    debug!("Initialized GDT");
 }

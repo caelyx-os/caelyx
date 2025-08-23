@@ -2,10 +2,10 @@
 
 set -xe
 
-FLAGS="-accel kvm -cpu host -M q35 -serial stdio"
+FLAGS="-M q35 -no-reboot -serial stdio"
 
 if [ "$GDB" == "true" ]; then
-  FLAGS="${FLAGS} -S -s -no-reboot -no-shutdown"
+  FLAGS="${FLAGS} -S -s"
 fi
 
 mkdir -p build/boot/grub

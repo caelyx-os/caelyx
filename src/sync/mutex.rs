@@ -62,7 +62,9 @@ impl<T> Mutex<T> {
 
     pub fn lock(&self) -> MutexGuard<'_, T> {
         let initial = interrupts_enabled();
-        disable_interrupts();
+        if initial {
+            disable_interrupts();
+        }
 
         loop {
             unsafe {

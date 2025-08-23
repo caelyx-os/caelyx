@@ -187,11 +187,13 @@ static INSTANCE: Mutex<IsItUninit<VGADriver>> = Mutex::new(IsItUninit::uninit())
 pub fn init() {
     let mut drv = VGADriver::new();
     drv.clear(VGAColorPair::default().bg);
-    INSTANCE.lock().write(drv);
+    let mut lock = INSTANCE.lock();
+    lock.write(drv);
 }
 
 pub fn print(str: &str) {
-    if let Some(vga) = INSTANCE.lock().try_get_mut() {
+    let mut lock = INSTANCE.lock();
+    if let Some(vga) = lock.try_get_mut() {
         vga.print(str, VGAColorPair::default());
     }
 }
