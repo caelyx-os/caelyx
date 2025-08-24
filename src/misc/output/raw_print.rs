@@ -13,5 +13,5 @@ pub fn print_fmt(args: Arguments<'_>) {
 }
 
 pub fn print_line_ending() {
-    print_fmt(format_args!("{}", LINE_ENDING));
+    print_fmt(format_args!("{LINE_ENDING}"));
 }

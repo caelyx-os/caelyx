@@ -6,7 +6,6 @@ use crate::{
         output::raw_print::{print_fmt, print_line_ending},
     },
     sync::mutex::Mutex,
-    x86::halt,
 };
 
 static LOGGER: Mutex<IsItUninit<Logger>> = Mutex::new(IsItUninit::uninit());

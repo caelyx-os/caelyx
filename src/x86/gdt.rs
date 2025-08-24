@@ -1,4 +1,4 @@
-use crate::{debug, sync::mutex::Mutex, trace, x86::halt};
+use crate::{debug, sync::mutex::Mutex, trace};
 
 // This is just a minimal GDT i sticked together 50 decades ago
 static GDT: [u64; 3] = [0x0000000000000000, 0x00CF9A000000FFFF, 0x00CF92000000FFFF];
