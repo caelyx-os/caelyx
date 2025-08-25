@@ -334,7 +334,7 @@ pub fn map4mb(
             addr: phys_addr,
             cache_disable,
             write_through,
-            page_size: false,
+            page_size: true,
             writable,
             user,
             present: true,
@@ -385,28 +385,18 @@ pub fn unmap(virt_addr: u32) {
 
 pub fn init() {
     assert!(feature_present(&crate::x86::cpuid::Features::Pse));
+
     enable_pse();
     trace!("Enabled PSE");
 
-    let entry = PageDirectoryEntry {
-        addr: 0,
-        cache_disable: false,
-        accessed: false,
-        page_attribute_table: false,
-        writable: true,
-        page_size: true,
-        global: false,
-        user: false,
-        present: true,
-        write_through: false,
-        dirty: false,
-    };
-
-    PAGE_DIRECTORY.set(0, entry);
+    map4mb(0, 0, false, true, false, false);
     trace!("Identity-mapped first 4MB");
+
     switch_cr3(PAGE_DIRECTORY.as_ptr::<()>() as u32);
     trace!("Loaded CR3");
+
     enable_pg();
     trace!("Turned on PG");
+
     debug!("Initialized VMM");
 }
