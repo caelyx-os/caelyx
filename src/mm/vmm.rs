@@ -403,11 +403,7 @@ pub fn init() {
     };
 
     PAGE_DIRECTORY.set(0, entry);
-    trace!("Identity-mapped first 2MB");
-    map(0xB8000, 0xC000000, false, true, false, false);
-    map(0xB9000, 0xC100000, false, true, false, false);
-    unmap(0xC000000);
-    map(0x1000, 0xC000000, false, true, false, false);
+    trace!("Identity-mapped first 4MB");
     switch_cr3(PAGE_DIRECTORY.as_ptr::<()>() as u32);
     trace!("Loaded CR3");
     enable_pg();
