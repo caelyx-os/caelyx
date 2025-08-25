@@ -9,7 +9,11 @@ use crate::{
         TagIterator as MultibootTagIterator,
     },
     debug,
-    misc::ptr_align::{align_ptr_down, align_ptr_up},
+    misc::{
+        isituninit::IsItUninit,
+        ptr_align::{align_ptr_down, align_ptr_up},
+    },
+    sync::mutex::Mutex,
     trace,
 };
 
@@ -204,12 +208,13 @@ impl PhysicalMemoryAllocator {
         }
     }
 
-    pub fn allocate(&self, count: usize) -> Option<*const u8> {
+    pub fn allocate(&self, count: usize) -> Option<*mut u8> {
         if let Some(bit) = self.take_bits(count) {
             let page_offset = bit * 4096;
             let start_page = self.block.first_page;
             let page = start_page + page_offset;
-            Some(page as *const u8)
+            debug!("Allocated {count} pages at 0x{page:08X}");
+            Some(page as *mut u8)
         } else {
             None
         }
@@ -220,38 +225,38 @@ impl PhysicalMemoryAllocator {
             || addr + count * 4096 > self.block.last_page
             || !addr.is_multiple_of(4096)
         {
-            panic!("Invalid free {addr:08X}");
+            panic!("Invalid free 0x{addr:08X}");
         }
 
         let start_bit = (addr - self.block.first_page) / 4096;
         let mut bit = start_bit;
         while bit < start_bit + count {
             if !PhysicalMemoryAllocator::get_bit(bit) {
-                panic!("Double free {addr:08X}");
+                panic!("Double free 0x{addr:08X}");
             }
 
             PhysicalMemoryAllocator::set_bit(bit, false);
 
             bit += 1;
         }
+
+        debug!("Freed {count} pages at 0x{addr:08X}");
     }
 }
 
+static PMM: Mutex<IsItUninit<PhysicalMemoryAllocator>> = Mutex::new(IsItUninit::uninit());
+
 pub fn init(tag_iter: &mut MultibootTagIterator) {
-    let pmm = PhysicalMemoryAllocator::new(*tag_iter).expect("Could not create PMM");
-    let mut addrs: [usize; 15] = [0; 15];
+    PMM.lock()
+        .write(PhysicalMemoryAllocator::new(*tag_iter).expect("Could not create PMM"));
+}
 
-    for _ in 0..2 {
-        for (i, addr_entry) in addrs.iter_mut().enumerate() {
-            if let Some(addr) = pmm.allocate(i + 1).map(|x| x as usize) {
-                *addr_entry = addr;
-                debug!("allocated 0x{addr:08X} (x{})", i + 1);
-            }
-        }
+pub fn allocate(count: usize) -> Option<*mut u8> {
+    let lock = PMM.lock();
+    lock.get_ref().allocate(count)
+}
 
-        for (i, &addr) in addrs.iter().enumerate() {
-            pmm.free(addr, i + 1);
-            debug!("freed 0x{addr:08X} (x{})", i + 1);
-        }
-    }
+pub fn free(addr: *const u8, count: usize) {
+    let lock = PMM.lock();
+    lock.get_ref().free(addr as usize, count);
 }

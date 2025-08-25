@@ -2,7 +2,7 @@
 
 set -xe
 
-FLAGS="-M q35 -no-reboot -serial stdio"
+FLAGS="-M q35 -no-reboot -serial stdio -cpu qemu64"
 
 if [ "$GDB" == "true" ]; then
   FLAGS="${FLAGS} -S -s"
