@@ -42,11 +42,13 @@ fn enable_pg() {
 fn flush_tlb(virt_addr: u32) {
     // flush tlb cache for a virtual address
     unsafe { core::arch::asm!("invlpg [{virt_addr}]", virt_addr = in(reg) virt_addr) }
+    trace!("Flushed TLB for 0x{virt_addr:08X}");
 }
 
 fn flush_tlb_full() {
     // flush the whole tlb cache by reloading the pd
     unsafe { core::arch::asm!("mov eax, cr3", "mov cr3, eax", out("eax") _) }
+    trace!("Flushed TLB for all addresses");
 }
 
 #[derive(Debug, Clone, Default)]
@@ -311,6 +313,8 @@ pub fn map(
         )
     }
 
+    debug!("Mapped 4KB page at 0x{phys_addr:08X} to 0x{virt_addr:08X}",);
+
     flush_tlb(virt_addr);
 }
 
@@ -345,6 +349,8 @@ pub fn map4mb(
         },
     );
 
+    debug!("Mapped 4MB page at 0x{phys_addr:08X} to 0x{virt_addr:08X}",);
+
     flush_tlb(virt_addr);
 }
 
@@ -359,6 +365,7 @@ pub fn unmap(virt_addr: u32) {
 
     if pde_entry.page_size {
         PAGE_DIRECTORY.set(pde, PageDirectoryEntry::default());
+        debug!("Unmapped 4MB page at 0x{virt_addr:08X}",);
         return;
     }
 
@@ -380,9 +387,15 @@ pub fn unmap(virt_addr: u32) {
         PAGE_DIRECTORY.set(pde, PageDirectoryEntry::default());
     }
 
+    debug!("Unmapped 4KB page at 0x{virt_addr:08X}",);
+
     flush_tlb(virt_addr);
 }
 
+// My virtual address space layout is beyond horrendously fucked:
+// 0x00000000 - 0x003FFFFF : Kernel
+// 0x00400000 - 0xBFFFFFFF : User (future)
+// 0xC0000000 - 0xFFFFFFFF : Kernel
 pub fn init() {
     assert!(feature_present(&crate::x86::cpuid::Features::Pse));
 

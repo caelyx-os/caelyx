@@ -191,7 +191,7 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
 
 pub fn set_interrupt_gate(gate: InterruptGate, idx: u8) {
     ISR_GATES.lock()[idx as usize] = gate.to_u64();
-    trace!("Set interrupt gate {}", idx);
+    trace!("ISR {} handler set", idx);
 }
 
 pub fn load_idt() {
