@@ -83,7 +83,7 @@ pub enum PhysicalMemoryAllocatorNewError {
 
 impl PhysicalMemoryAllocator {
     pub fn new(
-        mut tag_iter: MultibootTagIterator,
+        tag_iter: &mut MultibootTagIterator,
     ) -> Result<Self, PhysicalMemoryAllocatorNewError> {
         let mmap = tag_iter
             .find(|x| matches!(x, MultibootTag::Mmap(_)))
@@ -248,7 +248,7 @@ static PMM: Mutex<IsItUninit<PhysicalMemoryAllocator>> = Mutex::new(IsItUninit::
 
 pub fn init(tag_iter: &mut MultibootTagIterator) {
     PMM.lock()
-        .write(PhysicalMemoryAllocator::new(*tag_iter).expect("Could not create PMM"));
+        .write(PhysicalMemoryAllocator::new(tag_iter).expect("Could not create PMM"));
 }
 
 pub fn allocate(count: usize) -> Option<*mut u8> {

@@ -1,0 +1,3 @@
+[submodule "flanterm/flanterm"]
+	path = flanterm/flanterm
+	url = https://github.com/mintsuki/flanterm.git

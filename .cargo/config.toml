@@ -1,5 +1,5 @@
 [build]
-target = "compiletime/target.json"
+target = "compiletime/x86-caelyx.json"
 
 [target.'cfg(all())']
 rustflags = ["-C", "link-arg=-Tcompiletime/linker.ld"]

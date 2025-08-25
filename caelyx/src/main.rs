@@ -8,7 +8,7 @@ extern crate alloc;
 use crate::{
     boot::multiboot2,
     drvs::{e9::init as e9_init, serial::init as serial_init, vga::init as vga_init},
-    misc::output::logger::init as logger_init,
+    misc::output::{flanterm::init as flanterm_init, logger::init as logger_init},
     mm::{
         heap::init as heap_init, pmm::init as pmm_init,
         virt_page_alloc::init as virt_page_alloc_init, vmm::init as vmm_init,
@@ -29,13 +29,13 @@ extern "C" fn caelyx_kmain(mb2_info: *const ()) -> ! {
     vga_init();
     serial_init();
     e9_init();
+    flanterm_init(&mut multiboot2::TagIterator::new(mb2_info));
     logger_init();
     gdt_init();
     idt_init();
-    let mut multiboot_iter = multiboot2::TagIterator::new(mb2_info);
-    pmm_init(&mut multiboot_iter);
-    vmm_init();
+    pmm_init(&mut multiboot2::TagIterator::new(mb2_info));
     virt_page_alloc_init();
+    vmm_init();
     heap_init();
     print_cpuid();
 

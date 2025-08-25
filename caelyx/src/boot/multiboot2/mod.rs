@@ -40,7 +40,11 @@ impl<'a> TagIterator<'a> {
                 }))
             }
             bindings::MULTIBOOT_TAG_TYPE_VBE => Some(MultibootTag::Vbe),
-            bindings::MULTIBOOT_TAG_TYPE_FRAMEBUFFER => Some(MultibootTag::FrameBuffer),
+            bindings::MULTIBOOT_TAG_TYPE_FRAMEBUFFER => {
+                Some(MultibootTag::FrameBuffer(_MultibootFramebuffer(unsafe {
+                    &*(self.tag as *const bindings::multiboot_tag_framebuffer)
+                })))
+            }
             bindings::MULTIBOOT_TAG_TYPE_ELF_SECTIONS => Some(MultibootTag::ElfSections),
             bindings::MULTIBOOT_TAG_TYPE_APM => Some(MultibootTag::Apm),
             bindings::MULTIBOOT_TAG_TYPE_EFI32 => Some(MultibootTag::Efi32),
@@ -90,8 +94,7 @@ impl MultibootMmapEntryType {
 }
 
 #[repr(C, packed)]
-#[derive(Debug)]
-pub struct _MultibootMmapPart(bindings::multiboot_mmap_entry);
+pub struct _MultibootMmapPart(&'static bindings::multiboot_mmap_entry);
 impl _MultibootMmapPart {
     pub fn as_mmap_entry(&self) -> MultibootMmapEntry {
         MultibootMmapEntry {
@@ -102,7 +105,13 @@ impl _MultibootMmapPart {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+impl core::fmt::Debug for _MultibootMmapPart {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "_MultibootMmapPart")
+    }
+}
+
+#[derive(Debug)]
 pub enum MultibootTag<'a> {
     End,
     CmdLine,
@@ -112,7 +121,7 @@ pub enum MultibootTag<'a> {
     BootDev,
     Mmap(&'a [_MultibootMmapPart]),
     Vbe,
-    FrameBuffer,
+    FrameBuffer(_MultibootFramebuffer),
     ElfSections,
     Apm,
     Efi32,
@@ -126,6 +135,58 @@ pub enum MultibootTag<'a> {
     Efi32Ih,
     Efi64Ih,
     LoadBaseAddr,
+}
+
+#[derive(Debug, Hash, PartialEq, Eq, Clone, Copy)]
+pub struct MultibootFramebuffer {
+    pub addr: u32,
+    pub width: u32,
+    pub height: u32,
+    pub pitch: u32,
+    pub red_mask_size: u8,
+    pub red_mask_shift: u8,
+    pub green_mask_size: u8,
+    pub green_mask_shift: u8,
+    pub blue_mask_size: u8,
+    pub blue_mask_shift: u8,
+}
+
+#[repr(C, packed)]
+pub struct _MultibootFramebuffer(&'static bindings::multiboot_tag_framebuffer);
+impl _MultibootFramebuffer {
+    pub fn as_fb(&self) -> MultibootFramebuffer {
+        let common = self.0.common;
+        assert_eq!(common.framebuffer_bpp, 32);
+        let addr = common.framebuffer_addr as u32;
+        let width = common.framebuffer_width;
+        let height = common.framebuffer_height;
+        let pitch = common.framebuffer_pitch;
+        let color_info = unsafe { self.0.__bindgen_anon_1.__bindgen_anon_2.as_ref() };
+        let red_mask_size = color_info.framebuffer_red_mask_size;
+        let red_mask_shift = color_info.framebuffer_red_field_position;
+        let green_mask_size = color_info.framebuffer_green_mask_size;
+        let green_mask_shift = color_info.framebuffer_green_field_position;
+        let blue_mask_size = color_info.framebuffer_blue_mask_size;
+        let blue_mask_shift = color_info.framebuffer_blue_field_position;
+        MultibootFramebuffer {
+            addr,
+            width,
+            height,
+            pitch,
+            red_mask_size,
+            red_mask_shift,
+            green_mask_size,
+            green_mask_shift,
+            blue_mask_size,
+            blue_mask_shift,
+        }
+    }
+}
+
+impl core::fmt::Debug for _MultibootFramebuffer {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        write!(f, "_MultibootFramebuffer")
+    }
 }
 
 impl<'a> Iterator for TagIterator<'a> {

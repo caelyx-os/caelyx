@@ -1,6 +1,9 @@
-use crate::drvs::{
-    e9::print_fmt as e9_print_fmt, serial::print_fmt as serial_print_fmt,
-    vga::print_fmt as vga_print_fmt,
+use crate::{
+    drvs::{
+        e9::print_fmt as e9_print_fmt, serial::print_fmt as serial_print_fmt,
+        vga::print_fmt as vga_print_fmt,
+    },
+    misc::output::flanterm::print_fmt as flanterm_print_fmt,
 };
 use core::fmt::Arguments;
 
@@ -10,6 +13,7 @@ pub fn print_fmt(args: Arguments<'_>) {
     e9_print_fmt(args);
     serial_print_fmt(args);
     vga_print_fmt(args);
+    flanterm_print_fmt(args);
 }
 
 pub fn print_line_ending() {

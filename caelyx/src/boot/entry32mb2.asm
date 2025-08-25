@@ -17,6 +17,16 @@ dd caelyx_multiboot2_header_mmap_tag_end - caelyx_multiboot2_header_mmap_tag_sta
 caelyx_multiboot2_header_mmap_tag_end:
 
 align 8
+caelyx_multiboot2_header_fb_tag_start:
+dw 5
+dw 1
+dd caelyx_multiboot2_header_fb_tag_end - caelyx_multiboot2_header_fb_tag_start
+dd 0
+dd 0
+dd 32
+caelyx_multiboot2_header_fb_tag_end:
+
+align 8
 caelyx_multiboot2_header_end_tag_start:
 dw 0
 dw 0

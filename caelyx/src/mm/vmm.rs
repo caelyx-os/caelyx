@@ -1,4 +1,6 @@
-use crate::{debug, mm::pmm, trace, x86::cpuid::feature_present};
+use crate::{
+    debug, misc::output::flanterm::paging_fix, mm::pmm, trace, x86::cpuid::feature_present,
+};
 use core::{
     mem::MaybeUninit,
     sync::atomic::{AtomicU32, Ordering},
@@ -408,6 +410,7 @@ pub fn init() {
     switch_cr3(PAGE_DIRECTORY.as_ptr::<()>() as u32);
     trace!("Loaded CR3");
 
+    paging_fix();
     enable_pg();
     trace!("Turned on PG");
 

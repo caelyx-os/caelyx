@@ -1,11 +1,12 @@
 [package]
-name = "caelyx"
+name = "flanterm"
 version = "0.1.0"
 edition = "2024"
 build = "build.rs"
 
 [dependencies]
-flanterm = { path = "../flanterm" }
 
 [build-dependencies]
+bindgen = "0.72.0"
 glob = "0.3"
+cc = "1.2.34"
