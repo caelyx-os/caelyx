@@ -1,4 +1,4 @@
-target
-build
-dist
-Cargo.lock
+**/target
+**/build
+**/dist
+**/Cargo.lock

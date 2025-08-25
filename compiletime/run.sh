@@ -8,10 +8,9 @@ if [ "$GDB" == "true" ]; then
   FLAGS="${FLAGS} -S -s"
 fi
 
-mkdir -p build/boot/grub
-mkdir -p dist
-cp compiletime/grub.cfg build/boot/grub/grub.cfg
-cp $1 build/boot/caelyx.elf
-grub-mkrescue build -o dist/caelyx.iso
-qemu-system-x86_64 -cdrom dist/caelyx.iso -m 1G ${FLAGS}
+mkdir -p $OUT_DIR/iso_dir/boot/grub
+cp compiletime/grub.cfg $OUT_DIR/iso_dir/boot/grub/grub.cfg
+cp $1 $OUT_DIR/iso_dir/boot/caelyx.elf
+grub-mkrescue $OUT_DIR/iso_dir -o $OUT_DIR/caelyx.iso
+qemu-system-x86_64 -cdrom $OUT_DIR/caelyx.iso -m 1G ${FLAGS}
 
