@@ -270,7 +270,7 @@ pub fn map(
         let pt = pmm::allocate(1).expect("Could not allocate PT");
 
         unsafe {
-            core::ptr::write_bytes(pt, 0, 4096);
+            core::ptr::write_bytes(pt, 0u8, 4096);
         }
 
         let pt = pt as *const PageTable;

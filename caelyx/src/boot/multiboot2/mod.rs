@@ -94,7 +94,7 @@ impl MultibootMmapEntryType {
 }
 
 #[repr(C, packed)]
-pub struct _MultibootMmapPart(&'static bindings::multiboot_mmap_entry);
+pub struct _MultibootMmapPart(bindings::multiboot_mmap_entry);
 impl _MultibootMmapPart {
     pub fn as_mmap_entry(&self) -> MultibootMmapEntry {
         MultibootMmapEntry {

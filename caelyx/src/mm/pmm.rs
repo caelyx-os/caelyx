@@ -45,6 +45,7 @@ impl Iterator for FreeRegionIterator<'_> {
 
         let entry = self.mmap_iter.next()?.as_mmap_entry();
 
+        trace!("{entry:?}");
         if entry.type_ != MultibootMmapEntryType::Available {
             return self.next();
         }
