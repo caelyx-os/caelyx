@@ -6,7 +6,8 @@ mod bindings;
 
 #[derive(Clone, Copy, Debug)]
 pub struct TagIterator<'a> {
-    tag: *const bindings::multiboot_tag,
+    tag: &'static bindings::multiboot_tag,
+    info: &'static bindings::multiboot_info,
     __phantom: PhantomData<&'a ()>,
 }
 
@@ -14,13 +15,19 @@ impl<'a> TagIterator<'a> {
     pub fn new(info: *const ()) -> Self {
         let mb_info_ptr = info as *const bindings::multiboot_info;
         Self {
-            tag: unsafe { (*mb_info_ptr).tags.as_ptr() },
+            tag: unsafe { &*(*mb_info_ptr).tags.as_ptr() },
+            info: unsafe { &*mb_info_ptr },
             __phantom: PhantomData,
         }
     }
 
+    pub fn reset_pos(&mut self) {
+        self.tag = unsafe { &*self.info.tags.as_ptr() };
+    }
+
     pub fn get_tag(&self) -> Option<MultibootTag<'a>> {
-        let tag_type = unsafe { (*self.tag).type_ };
+        let tag = self.tag as *const _ as *const bindings::multiboot_tag;
+        let tag_type = (*self.tag).type_;
         match tag_type {
             bindings::MULTIBOOT_TAG_TYPE_END => Some(MultibootTag::End),
             bindings::MULTIBOOT_TAG_TYPE_CMDLINE => Some(MultibootTag::CmdLine),
@@ -29,7 +36,7 @@ impl<'a> TagIterator<'a> {
             bindings::MULTIBOOT_TAG_TYPE_BASIC_MEMINFO => Some(MultibootTag::BasicMemInfo),
             bindings::MULTIBOOT_TAG_TYPE_BOOTDEV => Some(MultibootTag::BootDev),
             bindings::MULTIBOOT_TAG_TYPE_MMAP => {
-                let mmap_tag = self.tag as *const bindings::multiboot_tag_mmap;
+                let mmap_tag = tag as *const bindings::multiboot_tag_mmap;
                 Some(MultibootTag::Mmap(unsafe {
                     core::slice::from_raw_parts(
                         (*mmap_tag).entries.as_ptr() as *const _MultibootMmapPart,
@@ -42,7 +49,7 @@ impl<'a> TagIterator<'a> {
             bindings::MULTIBOOT_TAG_TYPE_VBE => Some(MultibootTag::Vbe),
             bindings::MULTIBOOT_TAG_TYPE_FRAMEBUFFER => {
                 Some(MultibootTag::FrameBuffer(_MultibootFramebuffer(unsafe {
-                    &*(self.tag as *const bindings::multiboot_tag_framebuffer)
+                    &*(tag as *const bindings::multiboot_tag_framebuffer)
                 })))
             }
             bindings::MULTIBOOT_TAG_TYPE_ELF_SECTIONS => Some(MultibootTag::ElfSections),
@@ -50,8 +57,18 @@ impl<'a> TagIterator<'a> {
             bindings::MULTIBOOT_TAG_TYPE_EFI32 => Some(MultibootTag::Efi32),
             bindings::MULTIBOOT_TAG_TYPE_EFI64 => Some(MultibootTag::Efi64),
             bindings::MULTIBOOT_TAG_TYPE_SMBIOS => Some(MultibootTag::SmBios),
-            bindings::MULTIBOOT_TAG_TYPE_ACPI_OLD => Some(MultibootTag::AcpiOld),
-            bindings::MULTIBOOT_TAG_TYPE_ACPI_NEW => Some(MultibootTag::AcpiNew),
+            bindings::MULTIBOOT_TAG_TYPE_ACPI_OLD => Some(MultibootTag::AcpiOld(
+                unsafe { &*(tag as *const bindings::multiboot_tag_old_acpi) }
+                    .rsdp
+                    .as_ptr() as *const (),
+            )),
+
+            bindings::MULTIBOOT_TAG_TYPE_ACPI_NEW => Some(MultibootTag::AcpiNew(
+                unsafe { &*(tag as *const bindings::multiboot_tag_new_acpi) }
+                    .rsdp
+                    .as_ptr() as *const (),
+            )),
+
             bindings::MULTIBOOT_TAG_TYPE_NETWORK => Some(MultibootTag::Network),
             bindings::MULTIBOOT_TAG_TYPE_EFI_MMAP => Some(MultibootTag::EfiMMap),
             bindings::MULTIBOOT_TAG_TYPE_EFI_BS => Some(MultibootTag::EfiBs),
@@ -127,8 +144,8 @@ pub enum MultibootTag<'a> {
     Efi32,
     Efi64,
     SmBios,
-    AcpiOld,
-    AcpiNew,
+    AcpiOld(*const ()),
+    AcpiNew(*const ()),
     Network,
     EfiMMap,
     EfiBs,
@@ -192,7 +209,7 @@ impl core::fmt::Debug for _MultibootFramebuffer {
 impl<'a> Iterator for TagIterator<'a> {
     type Item = MultibootTag<'a>;
     fn next(&mut self) -> Option<Self::Item> {
-        let tag_ref = unsafe { &*self.tag };
+        let tag = self.tag as *const _;
         let ret = self.get_tag();
 
         if matches!(ret, Some(MultibootTag::End)) {
@@ -202,8 +219,10 @@ impl<'a> Iterator for TagIterator<'a> {
 
         if ret.is_some() {
             // a tag, but not end
-            self.tag = align_ptr_up((self.tag as usize + tag_ref.size as usize) as *const u8, 8)
-                as *const bindings::multiboot_tag;
+            self.tag = unsafe {
+                &*(align_ptr_up((tag as usize + self.tag.size as usize) as *const u8, 8)
+                    as *const bindings::multiboot_tag)
+            };
             ret
         } else {
             // unknown tag

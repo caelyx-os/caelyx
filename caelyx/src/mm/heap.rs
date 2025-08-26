@@ -17,13 +17,24 @@ pub struct Heap {
 
 impl Heap {
     pub fn new() -> Self {
-        let phys_pages = pmm::allocate(16).expect("Could not allocate initial heap physical pages"); // initial heap size = 16 pages
+        let phys_pages =
+            pmm::allocate(256).expect("Could not allocate initial heap physical pages"); // initial heap size = 16 pages
         let virt_pages =
-            virt_page_alloc::allocate(16).expect("Could not allocate initial heap virtual pages");
-        vmm::map(phys_pages as u32, virt_pages, false, true, false, false);
+            virt_page_alloc::allocate(256).expect("Could not allocate initial heap virtual pages");
+
+        for i in 0..256 {
+            vmm::map(
+                phys_pages as u32 + i * 4096,
+                virt_pages + i * 4096,
+                false,
+                true,
+                false,
+                false,
+            );
+        }
 
         Self {
-            mem_block: (virt_pages as usize, 16 * 4096),
+            mem_block: (virt_pages as usize, 256 * 4096),
             curr_offset: AtomicUsize::new(0),
         }
     }
@@ -43,10 +54,12 @@ unsafe impl GlobalAlloc for Heap {
         let allocation_ptr =
             align_ptr_up((self.mem_block.0 + curr_offset) as *const u8, align) as usize;
 
+        if allocation_ptr + size > self.mem_block.0 + self.mem_block.1 {
+            panic!("Allocator OOM");
+        }
+
         self.curr_offset
             .store(allocation_ptr - self.mem_block.0 + size, Ordering::Release);
-
-        debug!("Allocated {size} bytes with alignment {align} at 0x{allocation_ptr:08X}");
 
         allocation_ptr as *mut u8
     }

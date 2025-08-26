@@ -95,6 +95,10 @@ unsafe extern "C" {
 #[repr(C, packed)]
 #[derive(Debug)]
 pub struct ISRFrame {
+    cr4: u32,
+    cr3: u32,
+    cr2: u32,
+    cr0: u32,
     edi: u32,
     esi: u32,
     ebp: u32,
@@ -159,7 +163,7 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
             }
         );
 
-        debug!(
+        fatal!(
             "EAX ={:#010X} EBX ={:#010X} ECX    ={:#010X} EDX={:#010X}",
             unsafe { read_unaligned(&raw const isr_frame.eax) },
             unsafe { read_unaligned(&raw const isr_frame.ebx) },
@@ -167,7 +171,7 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
             unsafe { read_unaligned(&raw const isr_frame.edx) }
         );
 
-        debug!(
+        fatal!(
             "ESI ={:#010X} EDI ={:#010X} EBP    ={:#010X} ESP={:#010X}",
             unsafe { read_unaligned(&raw const isr_frame.esi) },
             unsafe { read_unaligned(&raw const isr_frame.edi) },
@@ -175,11 +179,19 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
             unsafe { read_unaligned(&raw const isr_frame.esp) },
         );
 
-        debug!(
-            "EIP ={:#010X} CS  ={:#010X} EFLAGS ={:#010X}",
+        fatal!(
+            "EIP ={:#010X} CS  ={:#010X} EFLAGS ={:#010X} CR0={:#010X}",
             unsafe { read_unaligned(&raw const isr_frame.eip) },
             unsafe { read_unaligned(&raw const isr_frame.cs) },
             unsafe { read_unaligned(&raw const isr_frame.eflags) },
+            unsafe { read_unaligned(&raw const isr_frame.cr0) },
+        );
+
+        fatal!(
+            "CR2 ={:#010X} CR3 ={:#010X} CR4    ={:#010X}",
+            unsafe { read_unaligned(&raw const isr_frame.cr2) },
+            unsafe { read_unaligned(&raw const isr_frame.cr3) },
+            unsafe { read_unaligned(&raw const isr_frame.cr4) },
         );
 
         interrupt_control::disable_interrupts();
@@ -191,7 +203,6 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
 
 pub fn set_interrupt_gate(gate: InterruptGate, idx: u8) {
     ISR_GATES.lock()[idx as usize] = gate.to_u64();
-    trace!("ISR {} handler set", idx);
 }
 
 pub fn load_idt() {

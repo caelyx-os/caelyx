@@ -3,15 +3,7 @@ use core::{
     sync::atomic::{AtomicU8, Ordering},
 };
 
-use crate::{
-    debug,
-    misc::{
-        isituninit::IsItUninit,
-        ptr_align::{align_ptr_down, align_ptr_up},
-    },
-    sync::mutex::Mutex,
-    trace,
-};
+use crate::{debug, misc::isituninit::IsItUninit, sync::mutex::Mutex};
 
 unsafe extern "C" {
     static KERNEL_START: core::ffi::c_void;
@@ -74,7 +66,6 @@ impl VirtPageAllocator {
         if let Some(bit) = self.take_bits(count) {
             let page_offset = bit * 4096;
             let page = usize::MAX - usize::MAX / 4 + page_offset;
-            debug!("Allocated {count} pages at 0x{page:08X}");
             Some(page as u32)
         } else {
             None
@@ -86,7 +77,7 @@ impl VirtPageAllocator {
             panic!("Invalid free 0x{addr:08X}");
         }
 
-        let start_bit = (addr - usize::MAX - usize::MAX / 4) / 4096;
+        let start_bit = (addr - (usize::MAX - usize::MAX / 4)) / 4096;
         let mut bit = start_bit;
         while bit < start_bit + count {
             if !Self::get_bit(bit) {
@@ -97,8 +88,6 @@ impl VirtPageAllocator {
 
             bit += 1;
         }
-
-        debug!("Freed {count} pages at 0x{addr:08X}");
     }
 }
 
@@ -113,6 +102,7 @@ static VIRT_PAGE_ALLOC: Mutex<IsItUninit<VirtPageAllocator>> = Mutex::new(IsItUn
 pub fn init() {
     let mut lock = VIRT_PAGE_ALLOC.lock();
     lock.write(VirtPageAllocator::new());
+    debug!("Initialized virtual page allocator");
 }
 
 pub fn allocate(count: usize) -> Option<u32> {

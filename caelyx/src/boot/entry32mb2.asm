@@ -27,6 +27,20 @@ dd 32
 caelyx_multiboot2_header_fb_tag_end:
 
 align 8
+caelyx_multiboot2_header_acpi1_tag_start:
+dw 14
+dw 1
+dd caelyx_multiboot2_header_acpi1_tag_end - caelyx_multiboot2_header_acpi1_tag_start
+caelyx_multiboot2_header_acpi1_tag_end:
+
+align 8
+caelyx_multiboot2_header_acpi2_tag_start:
+dw 15
+dw 1
+dd caelyx_multiboot2_header_acpi2_tag_end - caelyx_multiboot2_header_acpi2_tag_start
+caelyx_multiboot2_header_acpi2_tag_end:
+
+align 8
 caelyx_multiboot2_header_end_tag_start:
 dw 0
 dw 0

@@ -6,17 +6,7 @@ isr%+%1%+_handler:
 
     push dword %1
     
-    pushad
-    push esp
-
-    call isr_general_handler
-    
-    add esp, 4
-    popad
-    
-    add esp, 8
-    
-    iret
+    jmp isr_common
 %endmacro
 
 %macro isr_no_err_stub 1
@@ -25,19 +15,47 @@ isr%+%1%+_handler:
 
     push dword 0
     push dword %1
-    
+
+    jmp isr_common
+%endmacro
+
+isr_common:
     pushad
+
+    mov eax, cr0
+    push eax
+
+    mov eax, cr2
+    push eax
+    
+    mov eax, cr3
+    push eax
+    
+    mov eax, cr4
+    push eax
+    
     push esp
 
     call isr_general_handler
 
     add esp, 4
+    
+    pop eax
+    mov cr4, eax
+    
+    pop eax
+    mov cr3, eax
+    
+    pop eax
+    ;mov cr2, eax thats useless
+    
+    pop eax
+    mov cr0, eax
+
     popad
     
     add esp, 8
-    
     iret
-%endmacro
 
 extern isr_general_handler
 isr_no_err_stub 0

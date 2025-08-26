@@ -214,7 +214,6 @@ impl PhysicalMemoryAllocator {
             let page_offset = bit * 4096;
             let start_page = self.block.first_page;
             let page = start_page + page_offset;
-            debug!("Allocated {count} pages at 0x{page:08X}");
             Some(page as *mut u8)
         } else {
             None
@@ -240,8 +239,6 @@ impl PhysicalMemoryAllocator {
 
             bit += 1;
         }
-
-        debug!("Freed {count} pages at 0x{addr:08X}");
     }
 }
 
