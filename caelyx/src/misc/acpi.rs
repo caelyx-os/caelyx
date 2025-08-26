@@ -58,10 +58,6 @@ fn find_rsdp(tag_iter: &mut multiboot2::TagIterator) -> *const () {
 
 pub fn init(tag_iter: &mut multiboot2::TagIterator) {
     RSDP.lock().write(find_rsdp(tag_iter) as usize);
-    let mut table: uacpi_table = uacpi_table::default();
-    unsafe {
-        uacpi_table_find_by_signature(b"APIC".as_ptr() as *const i8, &raw mut table);
-    }
 
     unsafe {
         if uacpi_initialize(0) != uacpi_status_UACPI_STATUS_OK
