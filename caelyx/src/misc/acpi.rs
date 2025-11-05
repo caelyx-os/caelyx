@@ -7,7 +7,7 @@ use uacpi::{
     uacpi_log_level_UACPI_LOG_INFO, uacpi_log_level_UACPI_LOG_TRACE,
     uacpi_log_level_UACPI_LOG_WARN, uacpi_namespace_initialize, uacpi_namespace_load,
     uacpi_pci_address, uacpi_phys_addr, uacpi_size, uacpi_status, uacpi_status_UACPI_STATUS_OK,
-    uacpi_status_UACPI_STATUS_UNIMPLEMENTED, uacpi_table, uacpi_table_find_by_signature,
+    uacpi_status_UACPI_STATUS_UNIMPLEMENTED,
     uacpi_thread_id, uacpi_u8, uacpi_u16, uacpi_u32, uacpi_u64, uacpi_work_handler,
     uacpi_work_type,
 };

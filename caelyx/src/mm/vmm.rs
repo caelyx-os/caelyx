@@ -1,14 +1,17 @@
 use crate::{
-    debug, misc::output::flanterm::paging_fix, mm::pmm, trace, x86::cpuid::feature_present,
+    debug,
+    misc::output::flanterm::paging_fix,
+    mm::pmm,
+    trace,
+    x86::cpuid::feature_present,
 };
-use core::{
-    mem::MaybeUninit,
-    sync::atomic::{AtomicU32, Ordering},
-};
+use core::{ mem::MaybeUninit, sync::atomic::{ AtomicU32, Ordering } };
 
 fn switch_cr3(cr3: u32) {
     // cr3 stores the pointer to the highest level paging structure
-    unsafe { core::arch::asm!("mov cr3, eax", in("eax") cr3) }
+    unsafe {
+        core::arch::asm!("mov cr3, eax", in("eax") cr3)
+    }
 }
 
 fn enable_pse() {
@@ -43,12 +46,9 @@ fn enable_pg() {
 
 fn flush_tlb(virt_addr: u32) {
     // flush tlb cache for a virtual address
-    unsafe { core::arch::asm!("invlpg [{virt_addr}]", virt_addr = in(reg) virt_addr) }
-}
-
-fn flush_tlb_full() {
-    // flush the whole tlb cache by reloading the pd
-    unsafe { core::arch::asm!("mov eax, cr3", "mov cr3, eax", out("eax") _) }
+    unsafe {
+        core::arch::asm!("invlpg [{virt_addr}]", virt_addr = in(reg) virt_addr)
+    }
 }
 
 #[derive(Debug, Clone, Default)]
@@ -68,11 +68,9 @@ pub struct PageDirectoryEntry {
 
 impl PageDirectoryEntry {
     pub fn to_u32(&self) -> u32 {
-        assert!(self.addr.is_multiple_of(if !self.page_size {
-            2u32.pow(12)
-        } else {
-            2u32.pow(22)
-        }));
+        assert!(
+            self.addr.is_multiple_of(if !self.page_size { (2u32).pow(12) } else { (2u32).pow(22) })
+        );
 
         let mut end_u32: u32 = 0;
 
@@ -90,9 +88,9 @@ impl PageDirectoryEntry {
         if self.page_size {
             end_u32 |= (self.global as u32) << 8;
             end_u32 |= (self.page_attribute_table as u32) << 12;
-            end_u32 |= self.addr >> 22 << 22;
+            end_u32 |= (self.addr >> 22) << 22;
         } else {
-            end_u32 |= self.addr >> 12 << 12;
+            end_u32 |= (self.addr >> 12) << 12;
         }
 
         end_u32
@@ -116,12 +114,12 @@ impl PageDirectoryEntry {
             dirty = (from & (1 << 6)) != 0;
             global = (from & (1 << 8)) != 0;
             page_attribute_table = (from & (1 << 12)) != 0;
-            addr = from >> 22 << 22;
+            addr = (from >> 22) << 22;
         } else {
             global = false;
             page_attribute_table = false;
             dirty = false;
-            addr = from >> 12 << 12;
+            addr = (from >> 12) << 12;
         }
 
         PageDirectoryEntry {
@@ -156,7 +154,7 @@ pub struct PageTableEntry {
 
 impl PageTableEntry {
     pub fn to_u32(&self) -> u32 {
-        assert!(self.addr.is_multiple_of(2u32.pow(12)));
+        assert!(self.addr.is_multiple_of((2u32).pow(12)));
 
         let mut end_u32: u32 = 0;
 
@@ -169,7 +167,7 @@ impl PageTableEntry {
         end_u32 |= (self.dirty as u32) << 6;
         end_u32 |= (self.global as u32) << 8;
         end_u32 |= (self.page_attribute_table as u32) << 12;
-        end_u32 |= self.addr >> 12 << 12;
+        end_u32 |= (self.addr >> 12) << 12;
 
         end_u32
     }
@@ -184,7 +182,7 @@ impl PageTableEntry {
         let dirty: bool = (from & (1 << 6)) != 0;
         let page_attribute_table: bool = (from & (1 << 7)) != 0;
         let global: bool = (from & (1 << 8)) != 0;
-        let addr: u32 = from >> 12 << 12;
+        let addr: u32 = (from >> 12) << 12;
 
         PageTableEntry {
             addr,
@@ -213,6 +211,7 @@ impl PageDirectory {
         self.0.as_ptr() as *const T
     }
 
+    #[allow(unused)]
     pub const fn as_mut_ptr<T>(&mut self) -> *mut T {
         self.0.as_mut_ptr() as *mut T
     }
@@ -230,14 +229,17 @@ impl PageDirectory {
 struct PageTable([AtomicU32; 1024]);
 
 impl PageTable {
+    #[allow(unused)]
     pub const fn create() -> Self {
         Self(unsafe { MaybeUninit::zeroed().assume_init() })
     }
 
+    #[allow(unused)]
     pub const fn as_ptr<T>(&self) -> *const T {
         self.0.as_ptr() as *const T
     }
 
+    #[allow(unused)]
     pub const fn as_mut_ptr<T>(&mut self) -> *mut T {
         self.0.as_mut_ptr() as *mut T
     }
@@ -259,10 +261,10 @@ pub fn map(
     user: bool,
     writable: bool,
     cache_disable: bool,
-    write_through: bool,
+    write_through: bool
 ) {
-    let pde: usize = ((virt_addr >> 22) & 0x3FF) as usize;
-    let pte: usize = ((virt_addr >> 12) & 0x3FF) as usize;
+    let pde: usize = ((virt_addr >> 22) & 0x3ff) as usize;
+    let pte: usize = ((virt_addr >> 12) & 0x3ff) as usize;
 
     if !PAGE_DIRECTORY.get(pde).present {
         let pt = pmm::allocate(1).expect("Could not allocate PT");
@@ -272,45 +274,39 @@ pub fn map(
         }
 
         let pt = pt as *const PageTable;
-        PAGE_DIRECTORY.set(
-            pde,
-            PageDirectoryEntry {
-                addr: pt as u32,
-                cache_disable,
-                write_through,
-                page_size: false,
-                writable,
-                user,
-                present: true,
-                accessed: false,
-                dirty: false,
-                global: false,
-                page_attribute_table: false,
-            },
-        )
+        PAGE_DIRECTORY.set(pde, PageDirectoryEntry {
+            addr: pt as u32,
+            cache_disable,
+            write_through,
+            page_size: false,
+            writable,
+            user,
+            present: true,
+            accessed: false,
+            dirty: false,
+            global: false,
+            page_attribute_table: false,
+        });
     }
 
     let pt = PAGE_DIRECTORY.get(pde).addr as *const PageTable;
-    if unsafe { (*pt).get(pte) }.present {
+    if (unsafe { (*pt).get(pte) }).present {
         panic!("Double map (PTE level) 0x{virt_addr:08X}");
     }
 
     unsafe {
-        (*pt).set(
-            pte,
-            PageTableEntry {
-                addr: phys_addr,
-                cache_disable,
-                write_through,
-                writable,
-                user,
-                present: true,
-                accessed: false,
-                dirty: false,
-                global: false,
-                page_attribute_table: false,
-            },
-        )
+        (*pt).set(pte, PageTableEntry {
+            addr: phys_addr,
+            cache_disable,
+            write_through,
+            writable,
+            user,
+            present: true,
+            accessed: false,
+            dirty: false,
+            global: false,
+            page_attribute_table: false,
+        });
     }
 
     flush_tlb(virt_addr);
@@ -322,37 +318,34 @@ pub fn map4mb(
     user: bool,
     writable: bool,
     cache_disable: bool,
-    write_through: bool,
+    write_through: bool
 ) {
-    let pde: usize = ((virt_addr >> 22) & 0x3FF) as usize;
+    let pde: usize = ((virt_addr >> 22) & 0x3ff) as usize;
 
     if PAGE_DIRECTORY.get(pde).present {
         panic!("Double map (PDE level) 0x{virt_addr:08X}");
     }
 
-    PAGE_DIRECTORY.set(
-        pde,
-        PageDirectoryEntry {
-            addr: phys_addr,
-            cache_disable,
-            write_through,
-            page_size: true,
-            writable,
-            user,
-            present: true,
-            accessed: false,
-            dirty: false,
-            global: false,
-            page_attribute_table: false,
-        },
-    );
+    PAGE_DIRECTORY.set(pde, PageDirectoryEntry {
+        addr: phys_addr,
+        cache_disable,
+        write_through,
+        page_size: true,
+        writable,
+        user,
+        present: true,
+        accessed: false,
+        dirty: false,
+        global: false,
+        page_attribute_table: false,
+    });
 
     flush_tlb(virt_addr);
 }
 
 pub fn unmap(virt_addr: u32) {
-    let pde: usize = ((virt_addr >> 22) & 0x3FF) as usize;
-    let pte: usize = ((virt_addr >> 12) & 0x3FF) as usize;
+    let pde: usize = ((virt_addr >> 22) & 0x3ff) as usize;
+    let pte: usize = ((virt_addr >> 12) & 0x3ff) as usize;
 
     let pde_entry = PAGE_DIRECTORY.get(pde);
     if !pde_entry.present {
@@ -361,7 +354,7 @@ pub fn unmap(virt_addr: u32) {
 
     if pde_entry.page_size {
         PAGE_DIRECTORY.set(pde, PageDirectoryEntry::default());
-        debug!("Unmapped 4MB page at 0x{virt_addr:08X}",);
+        debug!("Unmapped 4MB page at 0x{virt_addr:08X}");
         return;
     }
 
@@ -372,7 +365,7 @@ pub fn unmap(virt_addr: u32) {
 
     let mut present = false;
     for i in 0..1024 {
-        if unsafe { (*pt).get(i) }.present {
+        if (unsafe { (*pt).get(i) }).present {
             present = true;
             break;
         }

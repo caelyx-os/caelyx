@@ -5,11 +5,6 @@ use core::{
 
 use crate::{debug, misc::isituninit::IsItUninit, sync::mutex::Mutex};
 
-unsafe extern "C" {
-    static KERNEL_START: core::ffi::c_void;
-    static KERNEL_END: core::ffi::c_void;
-}
-
 const BITMAP_SIZE: usize = usize::MAX / 4 / 8 / 4096;
 static BITMAP: [AtomicU8; BITMAP_SIZE] = unsafe { MaybeUninit::zeroed().assume_init() };
 

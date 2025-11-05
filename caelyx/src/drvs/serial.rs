@@ -7,6 +7,7 @@ use crate::{
 use core::fmt::{Arguments, Write};
 
 pub struct SerialPort {
+    #[allow(unused)]
     num: u8,
     port: u16,
 }
