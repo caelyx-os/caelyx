@@ -6,7 +6,7 @@ use crate::x86::idt::interrupt_control::disable_interrupts;
 #[panic_handler]
 pub fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     print_line_ending();
-    fatal!(r" -------------           -------------    ");
+    fatal!(r"  -------------            -------------    ");
     fatal!(r"/             \          /             \  ");
     fatal!(r"|             |          |             |  ");
     fatal!(r"|             |          |             |  ");

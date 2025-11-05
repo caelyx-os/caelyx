@@ -1,15 +1,15 @@
-use crate::{debug, sync::mutex::Mutex, trace};
+use crate::{ debug, info, sync::mutex::Mutex, trace };
 
 // This is just a minimal GDT i sticked together 50 decades ago
-static GDT: [u64; 3] = [0x0000000000000000, 0x00CF9A000000FFFF, 0x00CF92000000FFFF];
+static GDT: [u64; 3] = [0x0000000000000000, 0x00cf9a000000ffff, 0x00cf92000000ffff];
 #[allow(clippy::erasing_op)]
 // The byte index of the null descriptor
-pub const GDT_NULL: u16 = 0 * core::mem::size_of::<u64>() as u16;
+pub const GDT_NULL: u16 = 0 * (core::mem::size_of::<u64>() as u16);
 #[allow(clippy::identity_op)]
 // The byte index of the code descriptor
-pub const GDT_CODE: u16 = 1 * core::mem::size_of::<u64>() as u16;
+pub const GDT_CODE: u16 = 1 * (core::mem::size_of::<u64>() as u16);
 // The byte index of the data descriptor
-pub const GDT_DATA: u16 = 2 * core::mem::size_of::<u64>() as u16;
+pub const GDT_DATA: u16 = 2 * (core::mem::size_of::<u64>() as u16);
 
 #[repr(C, packed)]
 #[derive(Clone)]
@@ -54,6 +54,6 @@ pub fn init() {
                          out("eax") _);
     }
 
-    trace!("Loaded GDTR & Reloaded cs,ds,es,fs,gs,ss");
-    debug!("Initialized GDT");
+    debug!("Loaded GDTR & Reloaded segments");
+    info!("Initialized GDT");
 }

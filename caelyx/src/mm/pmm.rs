@@ -1,18 +1,14 @@
-use core::{
-    mem::MaybeUninit,
-    sync::atomic::{AtomicU8, Ordering},
-};
+use core::{ mem::MaybeUninit, sync::atomic::{ AtomicU8, Ordering } };
 
 use crate::{
     boot::multiboot2::{
-        _MultibootMmapPart, MultibootMmapEntryType, MultibootTag,
+        _MultibootMmapPart,
+        MultibootMmapEntryType,
+        MultibootTag,
         TagIterator as MultibootTagIterator,
     },
     debug,
-    misc::{
-        isituninit::IsItUninit,
-        ptr_align::{align_ptr_down, align_ptr_up},
-    },
+    misc::{ isituninit::IsItUninit, ptr_align::{ align_ptr_down, align_ptr_up } },
     sync::mutex::Mutex,
     trace,
 };
@@ -54,9 +50,11 @@ impl Iterator for FreeRegionIterator<'_> {
             return self.next();
         }
 
+        trace!("Usable block: {entry:?}");
+
         let start = entry.start as usize;
         let size = if entry.start + entry.size > MAX {
-            MAX as usize - start
+            (MAX as usize) - start
         } else {
             entry.size as usize
         };
@@ -84,7 +82,7 @@ pub enum PhysicalMemoryAllocatorNewError {
 
 impl PhysicalMemoryAllocator {
     pub fn new(
-        tag_iter: &mut MultibootTagIterator,
+        tag_iter: &mut MultibootTagIterator
     ) -> Result<Self, PhysicalMemoryAllocatorNewError> {
         let mmap = tag_iter
             .find(|x| matches!(x, MultibootTag::Mmap(_)))
@@ -95,9 +93,9 @@ impl PhysicalMemoryAllocator {
             _ => unreachable!(),
         };
 
-        let kernel_start = (&raw const KERNEL_START) as usize;
-        let kernel_end = (&raw const KERNEL_END) as usize;
-        trace!("kernel: 0x{:08X}-0x{:08X}", kernel_start, kernel_end);
+        let kernel_start = &raw const KERNEL_START as usize;
+        let kernel_end = &raw const KERNEL_END as usize;
+        trace!("Kernel: 0x{:08X}-0x{:08X}", kernel_start, kernel_end);
         let mut current_biggest = (0, 0);
         for (start, size) in free_region_iterator {
             let end = start + size;
@@ -107,15 +105,16 @@ impl PhysicalMemoryAllocator {
                     current_biggest = chunk;
                 }
             } else {
-                if kernel_start > start
-                    && let Some(chunk) = process_chunk(start, kernel_start - start, current_biggest)
+                if
+                    kernel_start > start &&
+                    let Some(chunk) = process_chunk(start, kernel_start - start, current_biggest)
                 {
                     current_biggest = chunk;
                 }
 
-                if kernel_end < end
-                    && let Some(chunk) =
-                        process_chunk(kernel_end, end - kernel_end, current_biggest)
+                if
+                    kernel_end < end &&
+                    let Some(chunk) = process_chunk(kernel_end, end - kernel_end, current_biggest)
                 {
                     current_biggest = chunk;
                 }
@@ -124,7 +123,7 @@ impl PhysicalMemoryAllocator {
             fn process_chunk(
                 start: usize,
                 size: usize,
-                biggest: (usize, usize),
+                biggest: (usize, usize)
             ) -> Option<(usize, usize)> {
                 let first_page = align_ptr_up(start as *const u8, 4096) as usize;
                 if first_page > start + size {
@@ -141,7 +140,7 @@ impl PhysicalMemoryAllocator {
 
                 let page_count = (last_page - first_page) / 4096;
 
-                trace!("Found {page_count} pages at 0x{first_page:08X}-0x{last_page:08X}");
+                debug!("Found {page_count} pages at 0x{first_page:08X}-0x{last_page:08X}");
 
                 if page_count > biggest.1 {
                     Some((first_page, page_count))
@@ -170,16 +169,16 @@ impl PhysicalMemoryAllocator {
     fn set_bit(bit: usize, to: bool) {
         let mut val = BITMAP[bit / 8].load(Ordering::Acquire);
         if to {
-            val |= 1 << (bit % 8);
+            val |= 1 << bit % 8;
         } else {
-            val &= !(1 << (bit % 8));
+            val &= !(1 << bit % 8);
         }
         BITMAP[bit / 8].store(val, Ordering::Release);
     }
 
     fn get_bit(bit: usize) -> bool {
         let val = BITMAP[bit / 8].load(Ordering::Acquire);
-        (val & (1 << (bit % 8))) != 0
+        (val & (1 << bit % 8)) != 0
     }
 
     fn bitmap_size() -> usize {
@@ -221,9 +220,10 @@ impl PhysicalMemoryAllocator {
     }
 
     pub fn free(&self, addr: usize, count: usize) {
-        if addr < self.block.first_page
-            || addr + count * 4096 > self.block.last_page
-            || !addr.is_multiple_of(4096)
+        if
+            addr < self.block.first_page ||
+            addr + count * 4096 > self.block.last_page ||
+            !addr.is_multiple_of(4096)
         {
             panic!("Invalid free 0x{addr:08X}");
         }
@@ -245,8 +245,7 @@ impl PhysicalMemoryAllocator {
 static PMM: Mutex<IsItUninit<PhysicalMemoryAllocator>> = Mutex::new(IsItUninit::uninit());
 
 pub fn init(tag_iter: &mut MultibootTagIterator) {
-    PMM.lock()
-        .write(PhysicalMemoryAllocator::new(tag_iter).expect("Could not create PMM"));
+    PMM.lock().write(PhysicalMemoryAllocator::new(tag_iter).expect("Could not create PMM"));
 }
 
 pub fn allocate(count: usize) -> Option<*mut u8> {

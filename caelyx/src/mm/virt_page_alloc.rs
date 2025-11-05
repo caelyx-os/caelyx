@@ -1,9 +1,6 @@
-use core::{
-    mem::MaybeUninit,
-    sync::atomic::{AtomicU8, Ordering},
-};
+use core::{ mem::MaybeUninit, sync::atomic::{ AtomicU8, Ordering } };
 
-use crate::{debug, misc::isituninit::IsItUninit, sync::mutex::Mutex};
+use crate::{ info, misc::isituninit::IsItUninit, sync::mutex::Mutex };
 
 const BITMAP_SIZE: usize = usize::MAX / 4 / 8 / 4096;
 static BITMAP: [AtomicU8; BITMAP_SIZE] = unsafe { MaybeUninit::zeroed().assume_init() };
@@ -18,16 +15,16 @@ impl VirtPageAllocator {
     fn set_bit(bit: usize, to: bool) {
         let mut val = BITMAP[bit / 8].load(Ordering::Acquire);
         if to {
-            val |= 1 << (bit % 8);
+            val |= 1 << bit % 8;
         } else {
-            val &= !(1 << (bit % 8));
+            val &= !(1 << bit % 8);
         }
         BITMAP[bit / 8].store(val, Ordering::Release);
     }
 
     fn get_bit(bit: usize) -> bool {
         let val = BITMAP[bit / 8].load(Ordering::Acquire);
-        (val & (1 << (bit % 8))) != 0
+        (val & (1 << bit % 8)) != 0
     }
 
     fn bitmap_size() -> usize {
@@ -97,7 +94,7 @@ static VIRT_PAGE_ALLOC: Mutex<IsItUninit<VirtPageAllocator>> = Mutex::new(IsItUn
 pub fn init() {
     let mut lock = VIRT_PAGE_ALLOC.lock();
     lock.write(VirtPageAllocator::new());
-    debug!("Initialized virtual page allocator");
+    info!("Initialized virtual page allocator");
 }
 
 pub fn allocate(count: usize) -> Option<u32> {

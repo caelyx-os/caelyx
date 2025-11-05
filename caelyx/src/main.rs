@@ -8,16 +8,18 @@ extern crate alloc;
 
 use crate::{
     boot::multiboot2,
-    drvs::{e9::init as e9_init, serial::init as serial_init, vga::init as vga_init},
+    drvs::{ e9::init as e9_init, serial::init as serial_init, vga::init as vga_init },
     misc::{
         acpi::init as acpi_init,
-        output::{flanterm::init as flanterm_init, logger::init as logger_init},
+        output::{ flanterm::init as flanterm_init, logger::init as logger_init },
     },
     mm::{
-        heap::init as heap_init, pmm::init as pmm_init,
-        virt_page_alloc::init as virt_page_alloc_init, vmm::init as vmm_init,
+        heap::init as heap_init,
+        pmm::init as pmm_init,
+        virt_page_alloc::init as virt_page_alloc_init,
+        vmm::init as vmm_init,
     },
-    x86::{cpuid::print_cpuid, gdt::init as gdt_init, idt::init as idt_init},
+    x86::{ cpuid::print_cpuid, gdt::init as gdt_init, idt::init as idt_init },
 };
 
 pub mod boot;

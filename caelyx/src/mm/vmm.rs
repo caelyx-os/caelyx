@@ -1,5 +1,6 @@
 use crate::{
     debug,
+    info,
     misc::output::flanterm::paging_fix,
     mm::pmm,
     trace,
@@ -399,5 +400,5 @@ pub fn init() {
     enable_pg();
     trace!("Turned on PG");
 
-    debug!("Initialized VMM");
+    info!("Initialized VMM");
 }

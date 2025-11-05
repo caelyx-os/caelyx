@@ -1,7 +1,7 @@
 use crate::misc::output::raw_print::print_line_ending;
 use crate::x86::gdt::GDT_CODE;
 use crate::x86::halt;
-use crate::{debug, fatal, sync::mutex::Mutex, trace, x86::gdt::SharedGdtrAndIdtr};
+use crate::{ debug, fatal, info, sync::mutex::Mutex, trace, x86::gdt::SharedGdtrAndIdtr };
 use core::ptr::read_unaligned;
 
 pub mod interrupt_control {
@@ -78,7 +78,7 @@ pub struct InterruptGate {
 impl InterruptGate {
     pub fn to_u64(&self) -> u64 {
         let mut gate = 0;
-        gate |= (self.offset & 0xFFFF) as u64;
+        gate |= (self.offset & 0xffff) as u64;
         gate |= (self.segment_selector as u64) << 16;
         gate |= ((self.gate_type & 0b1111) as u64) << 40;
         gate |= ((self.dpl & 0b11) as u64) << 45;
@@ -132,66 +132,93 @@ extern "C" fn isr_general_handler(frame: *const ISRFrame) {
         fatal!(r" /                                     \  ");
         print_line_ending();
 
+        fatal!("{}", match isr_frame.int_no {
+            0 => "DIVISION ERROR",
+            1 => "DEBUG",
+            2 => "NON MASKABLE INTERRUPT",
+            3 => "BREAKPOINT",
+            4 => "OVERFLOW",
+            5 => "BOUND RANGE EXCEEDED",
+            6 => "INVALID OPCODE",
+            7 => "DEVICE NOT AVAILABLE",
+            8 => "DOUBLE FAULT",
+            9 => "COPROCESSOR SEGMENT OVERRUN",
+            10 => "INVALID TSS",
+            11 => "SEGMENT NOT PRESENT",
+            12 => "STACK SEGMENT FAULT",
+            13 => "GENERAL PROTECTION FAULT",
+            14 => "PAGE FAULT",
+            16 => "FLOATING POINT EXCEPTION",
+            17 => "ALIGNMENT CHECK",
+            18 => "MACHINE CHECK",
+            19 => "SIMD FLOATING POINT EXCEPTION",
+            20 => "VIRTUALIZATION EXCEPTION",
+            21 => "CONTROL PROTECTION EXCEPTION",
+            28 => "HYPERVISOR INJECTION EXCEPTION",
+            29 => "VMM COMMUNICATION EXCEPTION",
+            30 => "SECURITY EXCEPTION",
+            _ => "UNKNOWN EXCEPTION",
+        });
+
         fatal!(
-            "{}",
-            match isr_frame.int_no {
-                0 => "DIVISION ERROR",
-                1 => "DEBUG",
-                2 => "NON MASKABLE INTERRUPT",
-                3 => "BREAKPOINT",
-                4 => "OVERFLOW",
-                5 => "BOUND RANGE EXCEEDED",
-                6 => "INVALID OPCODE",
-                7 => "DEVICE NOT AVAILABLE",
-                8 => "DOUBLE FAULT",
-                9 => "COPROCESSOR SEGMENT OVERRUN",
-                10 => "INVALID TSS",
-                11 => "SEGMENT NOT PRESENT",
-                12 => "STACK SEGMENT FAULT",
-                13 => "GENERAL PROTECTION FAULT",
-                14 => "PAGE FAULT",
-                16 => "FLOATING POINT EXCEPTION",
-                17 => "ALIGNMENT CHECK",
-                18 => "MACHINE CHECK",
-                19 => "SIMD FLOATING POINT EXCEPTION",
-                20 => "VIRTUALIZATION EXCEPTION",
-                21 => "CONTROL PROTECTION EXCEPTION",
-                28 => "HYPERVISOR INJECTION EXCEPTION",
-                29 => "VMM COMMUNICATION EXCEPTION",
-                30 => "SECURITY EXCEPTION",
-                _ => "UNKNOWN EXCEPTION",
+            "EAX ={:#010X} EBX ={:#010X} ECX    ={:#010X} EDX={:#010X}",
+            unsafe {
+                read_unaligned(&raw const isr_frame.eax)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.ebx)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.ecx)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.edx)
             }
         );
 
         fatal!(
-            "EAX ={:#010X} EBX ={:#010X} ECX    ={:#010X} EDX={:#010X}",
-            unsafe { read_unaligned(&raw const isr_frame.eax) },
-            unsafe { read_unaligned(&raw const isr_frame.ebx) },
-            unsafe { read_unaligned(&raw const isr_frame.ecx) },
-            unsafe { read_unaligned(&raw const isr_frame.edx) }
-        );
-
-        fatal!(
             "ESI ={:#010X} EDI ={:#010X} EBP    ={:#010X} ESP={:#010X}",
-            unsafe { read_unaligned(&raw const isr_frame.esi) },
-            unsafe { read_unaligned(&raw const isr_frame.edi) },
-            unsafe { read_unaligned(&raw const isr_frame.ebp) },
-            unsafe { read_unaligned(&raw const isr_frame.esp) },
+            unsafe {
+                read_unaligned(&raw const isr_frame.esi)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.edi)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.ebp)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.esp)
+            }
         );
 
         fatal!(
             "EIP ={:#010X} CS  ={:#010X} EFLAGS ={:#010X} CR0={:#010X}",
-            unsafe { read_unaligned(&raw const isr_frame.eip) },
-            unsafe { read_unaligned(&raw const isr_frame.cs) },
-            unsafe { read_unaligned(&raw const isr_frame.eflags) },
-            unsafe { read_unaligned(&raw const isr_frame.cr0) },
+            unsafe {
+                read_unaligned(&raw const isr_frame.eip)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.cs)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.eflags)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.cr0)
+            }
         );
 
         fatal!(
             "CR2 ={:#010X} CR3 ={:#010X} CR4    ={:#010X}",
-            unsafe { read_unaligned(&raw const isr_frame.cr2) },
-            unsafe { read_unaligned(&raw const isr_frame.cr3) },
-            unsafe { read_unaligned(&raw const isr_frame.cr4) },
+            unsafe {
+                read_unaligned(&raw const isr_frame.cr2)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.cr3)
+            },
+            unsafe {
+                read_unaligned(&raw const isr_frame.cr4)
+            }
         );
 
         interrupt_control::disable_interrupts();
@@ -206,12 +233,16 @@ pub fn set_interrupt_gate(gate: InterruptGate, idx: u8) {
 }
 
 pub fn load_idt() {
-    unsafe { core::arch::asm!("lidt [{idt_reg:e}]", idt_reg = in(reg) &raw const *IDTR.lock()) }
+    unsafe {
+        core::arch::asm!("lidt [{idt_reg:e}]", idt_reg = in(reg) &raw const *IDTR.lock());
+    }
     trace!("Loaded IDTR");
 }
 
 pub fn store_idt(loc: *const SharedGdtrAndIdtr) {
-    unsafe { core::arch::asm!("sidt [{idt_reg:e}]", idt_reg = in(reg) loc) }
+    unsafe {
+        core::arch::asm!("sidt [{idt_reg:e}]", idt_reg = in(reg) loc);
+    }
     trace!("Stored IDTR");
 }
 
@@ -219,7 +250,7 @@ pub fn init() {
     {
         let gates_lock = ISR_GATES.lock();
         let mut idtr_lock = IDTR.lock();
-        idtr_lock.base = (&raw const *gates_lock) as u32;
+        idtr_lock.base = &raw const *gates_lock as u32;
         idtr_lock.limit = (gates_lock.len() * core::mem::size_of_val(&gates_lock[0]) - 1) as u16;
     }
     trace!("Initialized IDTR");
@@ -228,27 +259,35 @@ pub fn init() {
     store_idt(&raw const idtr);
 
     assert_eq!(
-        unsafe { read_unaligned(&raw const IDTR.lock().limit) },
-        unsafe { read_unaligned(&raw const idtr.limit) }
+        unsafe {
+            read_unaligned(&raw const IDTR.lock().limit)
+        },
+        unsafe {
+            read_unaligned(&raw const idtr.limit)
+        }
     );
 
     assert_eq!(
-        unsafe { read_unaligned(&raw const IDTR.lock().base) },
-        unsafe { read_unaligned(&raw const idtr.base) }
+        unsafe {
+            read_unaligned(&raw const IDTR.lock().base)
+        },
+        unsafe {
+            read_unaligned(&raw const idtr.base)
+        }
     );
 
     trace!("Loaded IDTR matches stored IDTR");
 
-    for (i, stub) in unsafe { isr_stubs }.iter().enumerate() {
+    for (i, stub) in (unsafe { isr_stubs }).iter().enumerate() {
         set_interrupt_gate(
             InterruptGate {
                 segment_selector: GDT_CODE,
-                gate_type: 0xE,
+                gate_type: 0xe,
                 dpl: 0,
                 present: true,
                 offset: *stub,
             },
-            i.try_into().unwrap(),
+            i.try_into().unwrap()
         );
     }
 
@@ -257,9 +296,9 @@ pub fn init() {
         core::arch::asm!("out dx, al", in("al") 0xFFu8, in("dx") 0xA1);
     }
 
-    trace!("Masked PIC");
+    debug!("Masked PIC");
 
     interrupt_control::enable_interrupts();
 
-    debug!("Initialized IDT");
+    info!("Initialized IDT");
 }

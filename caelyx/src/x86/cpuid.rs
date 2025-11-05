@@ -1,4 +1,6 @@
-use crate::{debug, misc::isituninit::IsItUninit, sync::mutex::Mutex};
+use alloc::{ format, string::{ String }, vec::Vec };
+
+use crate::{ debug, misc::isituninit::IsItUninit, sync::mutex::Mutex };
 
 #[repr(u32)]
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -145,7 +147,7 @@ fn _cpuid(
     gp: CpuidGp,
     gp_out: &mut CpuidGp,
     bypass_cpuid_check: bool,
-    bypass_cpuid_leaf_check: bool,
+    bypass_cpuid_leaf_check: bool
 ) {
     if !bypass_cpuid_check && !check_for_cpuid() {
         panic!("cpuid() called on a machine with no CPUID support");
@@ -176,7 +178,7 @@ fn ensure_cpuid_leaf_supported(leaf: u32) {
         },
         &mut out,
         false,
-        true,
+        true
     );
 
     if out.eax < leaf {
@@ -194,22 +196,22 @@ pub fn get_vendor() -> Vendor {
             ecx: 0,
             edx: 0,
         },
-        &mut out,
+        &mut out
     );
 
     let mut vendor_str: [u8; 12] = [0; 12];
-    vendor_str[0] = (out.ebx & 0xFF) as u8;
-    vendor_str[1] = ((out.ebx >> 8) & 0xFF) as u8;
-    vendor_str[2] = ((out.ebx >> 16) & 0xFF) as u8;
-    vendor_str[3] = ((out.ebx >> 24) & 0xFF) as u8;
-    vendor_str[4] = (out.edx & 0xFF) as u8;
-    vendor_str[5] = ((out.edx >> 8) & 0xFF) as u8;
-    vendor_str[6] = ((out.edx >> 16) & 0xFF) as u8;
-    vendor_str[7] = ((out.edx >> 24) & 0xFF) as u8;
-    vendor_str[8] = (out.ecx & 0xFF) as u8;
-    vendor_str[9] = ((out.ecx >> 8) & 0xFF) as u8;
-    vendor_str[10] = ((out.ecx >> 16) & 0xFF) as u8;
-    vendor_str[11] = ((out.ecx >> 24) & 0xFF) as u8;
+    vendor_str[0] = (out.ebx & 0xff) as u8;
+    vendor_str[1] = ((out.ebx >> 8) & 0xff) as u8;
+    vendor_str[2] = ((out.ebx >> 16) & 0xff) as u8;
+    vendor_str[3] = ((out.ebx >> 24) & 0xff) as u8;
+    vendor_str[4] = (out.edx & 0xff) as u8;
+    vendor_str[5] = ((out.edx >> 8) & 0xff) as u8;
+    vendor_str[6] = ((out.edx >> 16) & 0xff) as u8;
+    vendor_str[7] = ((out.edx >> 24) & 0xff) as u8;
+    vendor_str[8] = (out.ecx & 0xff) as u8;
+    vendor_str[9] = ((out.ecx >> 8) & 0xff) as u8;
+    vendor_str[10] = ((out.ecx >> 16) & 0xff) as u8;
+    vendor_str[11] = ((out.ecx >> 24) & 0xff) as u8;
     Vendor::from_vendor_bytes(&vendor_str)
 }
 
@@ -223,7 +225,7 @@ pub fn feature_present(feature: &Features) -> bool {
             ecx: 0,
             edx: 0,
         },
-        &mut out,
+        &mut out
     );
 
     (out.edx & (*feature as u32)) != 0
@@ -263,11 +265,19 @@ fn print_features() {
         Features::Pbe,
     ];
 
+    let mut present_features: Vec<Features> = Vec::new();
     for feature in features {
         if feature_present(feature) {
-            debug!("CPU feature: {feature:?}");
+            present_features.push(*feature);
         }
     }
+
+    let present_features: Vec<String> = present_features
+        .iter()
+        .map(|feat| format!("{feat:?}"))
+        .collect();
+
+    debug!("CPU features: {present_features:?}");
 }
 
 fn print_vendor() {

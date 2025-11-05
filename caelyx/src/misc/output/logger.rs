@@ -1,10 +1,7 @@
 use core::fmt::Arguments;
 
 use crate::{
-    misc::{
-        isituninit::IsItUninit,
-        output::raw_print::{print_fmt, print_line_ending},
-    },
+    misc::{ isituninit::IsItUninit, output::raw_print::{ print_fmt, print_line_ending } },
     sync::mutex::Mutex,
 };
 
@@ -87,30 +84,42 @@ pub fn log(level: LogLevel, file: &'static str, line: u32, args: Arguments<'_>) 
 
 #[macro_export]
 macro_rules! trace {
-    ($($arg:tt)*) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Trace, file!(), line!(), format_args!($($arg)*)));
+    (
+        $($arg:tt)*
+    ) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Trace, file!(), line!(), format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! debug {
-    ($($arg:tt)*) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Debug, file!(), line!(), format_args!($($arg)*)));
+    (
+        $($arg:tt)*
+    ) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Debug, file!(), line!(), format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! info {
-    ($($arg:tt)*) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Info, file!(), line!(), format_args!($($arg)*)));
+    (
+        $($arg:tt)*
+    ) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Info, file!(), line!(), format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! warning {
-    ($($arg:tt)*) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Warning, file!(), line!(), format_args!($($arg)*)));
+    (
+        $($arg:tt)*
+    ) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Warning, file!(), line!(), format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! error {
-    ($($arg:tt)*) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Error, file!(), line!(), format_args!($($arg)*)));
+    (
+        $($arg:tt)*
+    ) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Error, file!(), line!(), format_args!($($arg)*)));
 }
 
 #[macro_export]
 macro_rules! fatal {
-    ($($arg:tt)*) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Fatal, file!(), line!(), format_args!($($arg)*)));
+    (
+        $($arg:tt)*
+    ) => ($crate::misc::output::logger::log($crate::misc::output::logger::LogLevel::Fatal, file!(), line!(), format_args!($($arg)*)));
 }
