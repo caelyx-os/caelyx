@@ -72,8 +72,8 @@ impl<'a> Iterator for SerialPortIterator<'a> {
             outb(port + 4, 0b10010); // enable loopback
 
             // test loopback
-            outb(port, 69);
-            if inb(port) != 69 {
+            outb(port, 67);
+            if inb(port) != 67 {
                 self.current_idx += 1;
                 return self.next();
             }
