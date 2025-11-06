@@ -50,11 +50,6 @@ extern "C" fn caelyx_kmain(mb2_info: *const ()) -> ! {
     print_cpuid();
     acpi_init(&mut tag_iter);
     hpet_init();
-    for i in 1..=3 {
-        debug!("Waiting {i} seconds!");
-        hpet_sleep(core::time::Duration::from_secs(i));
-        debug!("Done waiting {i} seconds!");
-    }
 
     tag_iter.reset_pos();
 
