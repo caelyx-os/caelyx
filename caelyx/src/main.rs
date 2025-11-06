@@ -19,6 +19,7 @@ use crate::{
         virt_page_alloc::init as virt_page_alloc_init,
         vmm::init as vmm_init,
     },
+    sync::timer::hpet::{ hpet_sleep, init as hpet_init },
     x86::{ cpuid::print_cpuid, gdt::init as gdt_init, idt::init as idt_init },
 };
 
@@ -48,6 +49,13 @@ extern "C" fn caelyx_kmain(mb2_info: *const ()) -> ! {
     heap_init();
     print_cpuid();
     acpi_init(&mut tag_iter);
+    hpet_init();
+    for i in 1..=3 {
+        debug!("Waiting {i} seconds!");
+        hpet_sleep(core::time::Duration::from_secs(i));
+        debug!("Done waiting {i} seconds!");
+    }
+
     tag_iter.reset_pos();
 
     panic!("Finished all work");

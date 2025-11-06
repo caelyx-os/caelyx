@@ -1,4 +1,4 @@
-use core::{ alloc::Layout, hint::spin_loop, sync::atomic::AtomicBool };
+use core::{ alloc::Layout, hint::spin_loop, ptr::read_unaligned, sync::atomic::AtomicBool };
 
 use uacpi::{
     uacpi_bool,
@@ -46,6 +46,16 @@ use crate::{
     warning,
     x86::ioport::{ inb, inl, inw, outb, outl, outw },
 };
+
+#[repr(C, packed)]
+#[derive(Clone, Copy)]
+pub struct AcpiGAS {
+    pub address_space: u8,
+    pub bit_width: u8,
+    pub bit_offset: u8,
+    pub access_size: u8,
+    pub address: u64,
+}
 
 static RSDP: Mutex<IsItUninit<usize>> = Mutex::new(IsItUninit::uninit());
 static HANDLE: Mutex<u32> = Mutex::new(69);
@@ -97,18 +107,52 @@ pub fn init(tag_iter: &mut multiboot2::TagIterator) {
     }
 
     let madt_virtual_address: usize;
-    let madt_physical_address: usize;
 
     unsafe {
-        madt_virtual_address = madt_table.__bindgen_anon_1.virt_addr;
-        madt_physical_address = madt_table.__bindgen_anon_1.ptr as usize;
+        madt_virtual_address = madt_table.__bindgen_anon_1.ptr as usize;
     }
 
-    debug!(
-        "MADT virtual address: {madt_virtual_address:#08X}, MADT physical address: {madt_physical_address:#08X}"
-    );
+    parse_madt(madt_virtual_address);
 
     info!("Initialized ACPI");
+}
+
+pub fn get_hpet_table(table: &mut uacpi_table) -> bool {
+    unsafe {
+        uacpi_table_find_by_signature(b"HPET".as_ptr() as *const i8, table) ==
+            uacpi_status_UACPI_STATUS_OK
+    }
+}
+
+fn parse_madt(virt_addr: usize) {
+    debug!("Parsing MADT...");
+    let length = unsafe { read_unaligned((virt_addr + 4) as *const u32) };
+    let skipped_sdt_addr = virt_addr + 0x24;
+    let lapic_addr = unsafe { read_unaligned(skipped_sdt_addr as *const u32) };
+    let pic_present = ((unsafe { read_unaligned((skipped_sdt_addr + 4) as *const u32) }) & 1) != 0;
+    trace!("Length: {length}");
+    trace!("LAPIC address: {lapic_addr:#08X}");
+    trace!("PICs {}present", if !pic_present { "not " } else { "" });
+
+    let mut current_length = (skipped_sdt_addr - virt_addr + 8) as u32;
+    while current_length < length {
+        trace!("MADT Entry (offset = {current_length:#x}):");
+        let entry_addr = virt_addr + (current_length as usize);
+        let entry_type = unsafe { *(entry_addr as *const u8) };
+        let entry_length = unsafe { *((entry_addr + 1) as *const u8) };
+        trace!("Entry type: {}", match entry_type {
+            0 => "CPU LAPIC",
+            1 => "IOAPIC",
+            2 => "IOAPIC ISO",
+            3 => "IOAPIC NMI source",
+            4 => "IOAPIC NMIs",
+            5 => "LAPIC 64-bit address",
+            9 => "CPU x2APIC",
+            _ => "?",
+        });
+        trace!("Entry length: {entry_length}");
+        current_length += entry_length as u32;
+    }
 }
 
 #[unsafe(no_mangle)]
